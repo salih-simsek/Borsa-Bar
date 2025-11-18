@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar Borsası - Deepeak Edition (TV)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800;900&family=Oswald:wght@400;500;700&family=Roboto+Mono:wght@400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-body: #0f1115; --bg-card: #1a1d24; --text-primary: #ffffff; --text-secondary: #9ca3af;
+            --color-up: #10b981; --color-down: #ef4444; --color-gold: #d4af37; --color-brand: #3b82f6;
+            --border-color: #2d3748;
+        }
+        body {
+            background-color: var(--bg-body);
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            color: var(--text-primary); font-family: 'Montserrat', sans-serif; overflow: hidden; height: 100vh;
+        }
+        .header-premium { background: rgba(20, 22, 27, 0.98); border-bottom: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0,0,0,0.6); }
+        .main-logo { height: 60px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4)); }
+        .sub-logo { height: 35px; width: auto; object-fit: contain; opacity: 0.9; filter: grayscale(20%); }
+        .grid-layout { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); gap: 12px; height: calc(100vh - 100px); padding: 15px; }
+        
+        /* Kart Tasarımı */
+        .drink-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; display: flex; position: relative; overflow: visible; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); }
+        .drink-thumb { width: 35%; height: 100%; position: relative; overflow: hidden; border-radius: 6px 0 0 6px; }
+        .drink-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; filter: grayscale(30%); }
+        .drink-info { flex: 1; padding: 0 12px; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        .drink-name { font-family: 'Oswald', sans-serif; font-size: 1.1rem; color: var(--text-primary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .drink-price-box { display: flex; align-items: flex-end; justify-content: space-between; }
+        .price-container { display: flex; flex-direction: column; }
+        .drink-price { font-family: 'Oswald', sans-serif; font-size: 2.2rem; font-weight: 700; color: var(--text-primary); line-height: 1; letter-spacing: 1px; }
+        .start-price-label { font-family: 'Roboto Mono', monospace; font-size: 0.95rem; color: #9ca3af; font-weight: 700; margin-top: 4px; letter-spacing: -0.5px; }
+        .trend-indicator { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 3rem; line-height: 0.8; padding: 0; background: transparent !important; text-shadow: 0 0 15px currentColor; }
+        
+        /* Durumlar */
+        .status-up { border-left: 4px solid var(--color-up); background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(26, 29, 36, 0) 100%); }
+        .status-up .drink-price { color: var(--color-up); } .status-up .trend-indicator { color: var(--color-up); } .status-up .drink-img { transform: scale(1.05); filter: grayscale(0%); }
+        .status-down { border-left: 4px solid var(--color-down); background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(26, 29, 36, 0) 100%); }
+        .status-down .drink-price { color: var(--color-down); } .status-down .trend-indicator { color: var(--color-down); }
+        
+        /* SOLD OUT */
+        .sold-out-card { opacity: 0.6; filter: grayscale(100%); border-color: #444; }
+        .sold-out-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 50; }
+        .sold-out-stamp { font-family: 'Oswald', sans-serif; font-size: 2.5rem; color: #ef4444; border: 4px solid #ef4444; padding: 5px 20px; transform: rotate(-15deg); text-transform: uppercase; font-weight: 900; letter-spacing: 2px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+
+        /* Spotlight & Roulette */
+        .spotlight-active { border: 2px solid var(--color-gold) !important; box-shadow: 0 0 40px rgba(212, 175, 55, 0.2) !important; z-index: 50; transform: scale(1.03); background-color: #1e2026 !important; }
+        .spotlight-active::after { content: "★ GECENİN YILDIZI"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--color-gold); color: #000; padding: 3px 10px; border-radius: 4px; font-weight: 800; font-size: 0.65rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); white-space: nowrap; font-family: 'Montserrat', sans-serif; letter-spacing: 1px; z-index: 60; }
+        .roulette-highlight { border: 4px solid #ffffff !important; box-shadow: 0 0 50px #ffffff, inset 0 0 30px #ffffff !important; z-index: 60; transform: scale(1.05); background: #333 !important; }
+
+        /* Ticker & Others */
+        .ticker-container { overflow: hidden; position: relative; background: transparent; border: none; display: flex; align-items: center; justify-content: center; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); }
+        .ticker-content { display: inline-block; white-space: nowrap; font-family: 'Roboto Mono', monospace; color: #fbbf24; font-weight: 700; font-size: 1.4rem; letter-spacing: -0.5px; opacity: 1; transition: opacity 0.5s ease-in-out; text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(251, 191, 36, 0.2); width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+        .ticker-content.fade-out { opacity: 0; }
+        .price-bar-bg { width: 100%; height: 3px; background: #2d3748; margin-top: 10px; border-radius: 1px; overflow: hidden; }
+        .price-bar-fill { height: 100%; width: 50%; background: #4b5563; transition: width 1s ease, background-color 0.3s; }
+        #crash-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 15, 0.98); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; }
+        .crash-active-grid .drink-card { background: #220a0a; border-color: #7f1d1d; } .crash-active-grid .drink-price { color: #f87171; }
+        .crash-title { font-family: 'Oswald', sans-serif; font-size: 8rem; color: #ef4444; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; border-bottom: 4px solid #ef4444; padding-bottom: 20px; }
+        .crash-timer-box { font-family: 'Roboto Mono', monospace; font-size: 6rem; color: #fff; font-weight: 700; margin-top: 40px; background: #ef4444; padding: 0 40px; border-radius: 8px; }
+        .scanline { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 999; opacity: 0.3; }
+    </style>
+</head>
+<body>
+    <div class="scanline"></div>
+    <div class="h-24 header-premium flex items-center px-8 justify-between relative z-10">
+        <div class="flex items-center w-auto shrink-0"> 
+            <img src="Gemini_Generated_Image_7io5507io5507io5.jpg" alt="Deepeak Ana Logo" class="main-logo">
+            <div class="h-8 w-px bg-gray-700 mx-5"></div>
+            <img src="kereviz logo.jpg" alt="Kereviz İşletme Logosu" class="sub-logo">
+        </div>
+        <div class="flex-1 h-12 flex items-center justify-center relative ticker-container mx-6">
+            <!-- Varsayılan olarak Self Servis Mesajı -->
+            <div class="ticker-content" id="ticker">⚠️ SADECE SELF SERVİS HİZMET VERİLMEKTEDİR ⚠️</div>
+        </div>
+        <div class="text-right flex items-center h-full w-auto shrink-0 justify-end gap-8">
+            <div class="relative pl-6 border-l border-gray-700/50">
+                <div class="text-4xl font-bold font-[Oswald] text-white tracking-widest" id="clock">--:--</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-layout" id="grid">
+        <div class="col-span-5 flex items-center justify-center text-gray-500 text-xl">
+            <span class="animate-pulse">Admin Panelinden Veri Bekleniyor...</span>
+        </div>
+    </div>
+
+    <div id="crash-overlay">
+        <div class="text-red-500 text-2xl font-[Montserrat] tracking-[0.5em] font-bold mb-4 uppercase">Piyasa Askıya Alındı</div>
+        <div class="crash-title">ÇÖKÜŞ ANI</div>
+        <div class="text-gray-400 mt-6 font-[Montserrat] text-xl">TÜM VARLIKLAR TABAN FİYATTA İŞLEM GÖRÜYOR</div>
+        <div class="crash-timer-box" id="crash-timer">00:10</div>
+    </div>
+
+    <script>
+        const channel = new BroadcastChannel('bar_exchange_channel');
+        let products = JSON.parse(localStorage.getItem('bar_products')) || [];
+        const apiKey = ""; 
+        
+        // Ana mesaj
+        const SELF_SERVICE_MSG = "⚠️ SADECE SELF SERVİS HİZMET VERİLMEKTEDİR. LÜTFEN KASADAN SİPARİŞ VERİNİZ. ⚠️";
+        
+        let tickerInterval;
+
+        function init() {
+            if (products.length > 0) renderGrid();
+            updateClock();
+            setInterval(updateClock, 1000);
+            // İlk başlangıçta mesajı göster
+            updateTickerText(SELF_SERVICE_MSG);
+        }
+
+        // Mesajı 15 saniye sonra Self Servis'e döndüren fonksiyon
+        function resetTickerToDefault() {
+            if(tickerInterval) clearTimeout(tickerInterval);
+            tickerInterval = setTimeout(() => {
+                updateTickerText(SELF_SERVICE_MSG);
+            }, 10000); // 10 saniye sonra ana mesaja dön
+        }
+
+        channel.onmessage = (event) => {
+            const { type, data } = event.data;
+            
+            if (type === 'UPDATE' || type === 'SYNC') {
+                products = data;
+                renderGrid();
+            } else if (type === 'CRASH_START') {
+                triggerCrash();
+            } else if (type === 'ROULETTE_START') {
+                startRoulette();
+            } else if (type === 'TICKER_UPDATE') {
+                // Satış veya önemli bir duyuru geldiğinde bunu göster
+                updateTickerText(data);
+                resetTickerToDefault(); // Sonra ana mesaja dön
+            } else if (type === 'AI_PREDICTION') {
+                generateAiPrediction();
+            }
+        };
+
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            if (grid.children.length !== products.length || grid.querySelector('.col-span-5')) {
+                grid.innerHTML = '';
+                products.forEach(createCard);
+            } else {
+                products.forEach(updateCardUI);
+            }
+        }
+
+        function createCard(p) {
+            const grid = document.getElementById('grid');
+            const flame = p.type === 'HIGH' ? '<span class="absolute top-2 right-2 text-orange-500 animate-pulse text-lg">🔥</span>' : '';
+            const isSoldOut = p.stock !== undefined && p.stock <= 0;
+            const soldOutClass = isSoldOut ? 'sold-out-card' : '';
+            const soldOutOverlay = isSoldOut ? '<div class="sold-out-overlay"><div class="sold-out-stamp">TÜKENDİ</div></div>' : '';
+
+            const card = document.createElement('div');
+            card.className = `drink-card ${soldOutClass}`;
+            card.id = `card-${p.id}`;
+            card.innerHTML = `
+                ${soldOutOverlay}
+                <div class="drink-thumb"><img src="${p.image}" class="drink-img" alt="${p.name}" onerror="this.style.display='none'"></div>
+                <div class="drink-info relative">
+                    ${flame}
+                    <div class="drink-name">${p.name}</div>
+                    <div class="drink-price-box">
+                        <div class="price-container">
+                            <div class="drink-price" id="price-${p.id}">${p.price}₺</div>
+                            <div class="start-price-label">Açılış: ${p.startPrice}₺</div>
+                        </div>
+                        <div class="trend-indicator" id="trend-${p.id}"><span id="arrow-${p.id}">-</span></div>
+                    </div>
+                    <div class="price-bar-bg"><div class="price-bar-fill" id="bar-${p.id}" style="width: 50%;"></div></div>
+                </div>`;
+            grid.appendChild(card);
+        }
+
+        function updateCardUI(p) {
+            const card = document.getElementById(`card-${p.id}`);
+            if(!card) return;
+
+            const isSoldOut = p.stock !== undefined && p.stock <= 0;
+            const existingOverlay = card.querySelector('.sold-out-overlay');
+            
+            if (isSoldOut) {
+                card.classList.add('sold-out-card');
+                if (!existingOverlay) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'sold-out-overlay';
+                    overlay.innerHTML = '<div class="sold-out-stamp">TÜKENDİ</div>';
+                    card.prepend(overlay);
+                }
+                return; 
+            } else {
+                card.classList.remove('sold-out-card');
+                if (existingOverlay) existingOverlay.remove();
+            }
+
+            const priceEl = document.getElementById(`price-${p.id}`);
+            const arrowEl = document.getElementById(`arrow-${p.id}`);
+            const barEl = document.getElementById(`bar-${p.id}`);
+            
+            const oldPrice = parseInt(priceEl.innerText);
+            const newPrice = p.price;
+
+            priceEl.innerText = `${newPrice}₺`;
+
+            if(!card.classList.contains('spotlight-active') && !card.classList.contains('roulette-highlight')) {
+                card.classList.remove('status-up', 'status-down');
+                void card.offsetWidth; 
+                
+                if (newPrice > p.startPrice) { 
+                    card.classList.add('status-up');
+                    arrowEl.innerText = '▲';
+                    barEl.style.backgroundColor = 'var(--color-up)';
+                } else if (newPrice < p.startPrice) {
+                    card.classList.add('status-down');
+                    arrowEl.innerText = '▼';
+                    barEl.style.backgroundColor = 'var(--color-down)';
+                } else {
+                    arrowEl.innerText = '-';
+                    barEl.style.backgroundColor = '#4b5563';
+                }
+            }
+
+            let percent = ((newPrice - p.min) / (p.max - p.min)) * 100;
+            barEl.style.width = `${Math.max(5, Math.min(100, percent))}%`;
+        }
+
+        function startRoulette() {
+            updateTickerText("🎰 ŞANSLI ÜRÜN SEÇİLİYOR... DİKKAT! 🎰");
+            let cards = Array.from(document.querySelectorAll('.drink-card')).filter(c => !c.classList.contains('sold-out-card'));
+            if(cards.length === 0) return;
+
+            let rounds = 0;
+            let maxRounds = 20 + Math.floor(Math.random() * 10);
+            let current = 0;
+            let speed = 50;
+
+            document.querySelectorAll('.spotlight-active').forEach(el => el.classList.remove('spotlight-active'));
+
+            function spin() {
+                cards.forEach(c => c.classList.remove('roulette-highlight'));
+                cards[current].classList.add('roulette-highlight');
+                current = (current + 1) % cards.length;
+                rounds++;
+
+                if (rounds < maxRounds) {
+                    if (rounds > maxRounds - 10) speed += 30;
+                    else if (rounds > maxRounds - 5) speed += 60;
+                    setTimeout(spin, speed);
+                } else {
+                    let winnerCard = cards[(current === 0 ? cards.length - 1 : current - 1)]; 
+                    finishRoulette(winnerCard);
+                }
+            }
+            spin();
+        }
+
+        function finishRoulette(card) {
+            card.classList.remove('roulette-highlight');
+            card.classList.add('spotlight-active');
+            let name = card.querySelector('.drink-name').innerText;
+            updateTickerText(`🎉 GECENİN YILDIZI: ${name}! ŞİMDİ İNDİRİMLİ! 🎉`);
+            setTimeout(() => {
+                card.classList.remove('spotlight-active');
+                resetTickerToDefault(); // Mesaja dön
+            }, 10000);
+        }
+
+        function triggerCrash() {
+            const overlay = document.getElementById('crash-overlay');
+            const grid = document.getElementById('grid');
+            overlay.style.display = 'flex';
+            grid.classList.add('crash-active-grid');
+            let sec = 10;
+            const timerEl = document.getElementById('crash-timer');
+            timerEl.innerText = `00:${sec}`;
+            const interval = setInterval(() => {
+                sec--;
+                timerEl.innerText = `00:${sec < 10 ? '0'+sec : sec}`;
+                if (sec <= 0) {
+                    clearInterval(interval);
+                    overlay.style.display = 'none';
+                    setTimeout(() => grid.classList.remove('crash-active-grid'), 5000);
+                }
+            }, 1000);
+        }
+
+        function updateTickerText(text) {
+            const ticker = document.getElementById('ticker');
+            ticker.style.opacity = 0;
+            setTimeout(() => {
+                ticker.innerText = text;
+                ticker.style.opacity = 1;
+            }, 500);
+        }
+
+        function updateClock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        async function generateAiPrediction() {
+            const cheap = products.filter(p => p.price <= p.min + 15 && p.stock > 0);
+            if (!cheap.length) return;
+            const pick = cheap[Math.floor(Math.random() * cheap.length)];
+            
+            const card = document.getElementById(`card-${pick.id}`);
+            if(card) {
+                document.querySelectorAll('.spotlight-active').forEach(el => el.classList.remove('spotlight-active'));
+                card.classList.add('spotlight-active');
+                const message = `💡 FIRSAT ALARMI: ${pick.name} TEKNİK OLARAK DİP SEVİYEDE!`;
+                updateTickerText(message);
+                resetTickerToDefault();
+                setTimeout(() => { if(card) card.classList.remove('spotlight-active'); }, 10000);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

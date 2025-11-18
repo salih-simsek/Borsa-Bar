@@ -1,12 +1,129 @@
 import sqlite3
 import streamlit as st
 
-# ---------- DB Fonksiyonları ----------
+# ---------- DB Bağlantı ----------
 def get_connection():
     conn = sqlite3.connect("restaurant.db")
     conn.row_factory = sqlite3.Row
     return conn
 
+# ---------- Ayar / Sabitleme Yardımcıları ----------
+def ensure_settings_tables():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Genel ayarlar tablosu
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """)
+
+    # Sabitleme öncesi fiyat yedeği
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS fixed_price_backup (
+            product_id INTEGER PRIMARY KEY,
+            price REAL NOT NULL,
+            FOREIGN KEY(product_id) REFERENCES products(id)
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def is_fixed_mode_active():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT value FROM settings WHERE key = 'fixed_mode'")
+    row = cur.fetchone()
+    conn.close()
+    return (row is not None) and (row["value"] == "1")
+
+
+def set_fixed_mode(active: bool):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO settings (key, value)
+        VALUES ('fixed_mode', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    """, ("1" if active else "0",))
+    conn.commit()
+    conn.close()
+
+
+def apply_fixed_prices():
+    """
+    Fiyat sabitleme modunu başlat:
+    - Hedef ürünlerin şu anki fiyatlarını yedeğe al
+    - Fiyatlarını sabit değerlere çek
+    - fixed_mode = 1
+    """
+    fixed_values = {
+        "Bira": 80,
+        "Tekila": 130,
+        "Vodka": 180,
+        "Viski": 230,
+    }
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Eski yedekleri temizle (her başlatılışta sıfırdan alınsın)
+    cur.execute("DELETE FROM fixed_price_backup")
+
+    # Her ürün için: mevcut fiyatı yedekle, sonra sabit fiyata çek
+    for name, fixed_price in fixed_values.items():
+        cur.execute("SELECT id, price FROM products WHERE name = ?", (name,))
+        row = cur.fetchone()
+        if row:
+            pid = row["id"]
+            old_price = row["price"]
+            # yedek tabloya kaydet
+            cur.execute(
+                "INSERT INTO fixed_price_backup (product_id, price) VALUES (?, ?)",
+                (pid, old_price),
+            )
+            # sabit fiyatı uygula
+            cur.execute(
+                "UPDATE products SET price = ? WHERE id = ?",
+                (fixed_price, pid),
+            )
+
+    conn.commit()
+    conn.close()
+    set_fixed_mode(True)
+
+
+def restore_prices_from_backup():
+    """
+    Fiyat sabitleme modunu bitir:
+    - fixed_price_backup'taki fiyatları geri yükle
+    - yedek tabloyu temizle
+    - fixed_mode = 0
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Yedekten fiyatları geri yükle
+    cur.execute("SELECT product_id, price FROM fixed_price_backup")
+    rows = cur.fetchall()
+    for row in rows:
+        cur.execute(
+            "UPDATE products SET price = ? WHERE id = ?",
+            (row["price"], row["product_id"]),
+        )
+
+    # Yedekler temizlenir
+    cur.execute("DELETE FROM fixed_price_backup")
+
+    conn.commit()
+    conn.close()
+    set_fixed_mode(False)
+
+# ---------- DB Şema / Başlangıç ----------
 def init_db():
     conn = get_connection()
     cur = conn.cursor()
@@ -26,7 +143,6 @@ def init_db():
         )
     """)
 
-    # orders tablosu: sipariş anındaki fiyatı da saklıyoruz (unit_price)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +154,9 @@ def init_db():
             FOREIGN KEY(product_id) REFERENCES products(id)
         )
     """)
+
+    # Ayar/sabitleme tabloları
+    ensure_settings_tables()
 
     # Örnek ürünler
     cur.execute("SELECT COUNT(*) as c FROM products")
@@ -63,7 +182,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-
+# ---------- Temel DB Fonksiyonları ----------
 def get_products():
     conn = get_connection()
     cur = conn.cursor()
@@ -135,14 +254,19 @@ def clear_orders_for_table(table_id):
     conn.commit()
     conn.close()
 
-
 # ---- Borsa Bar fiyat güncelleme fonksiyonu ----
 def update_prices_after_order(ordered_product_id, quantity=1):
     """
     Bir ürün için sipariş alındığında:
-    - Sipariş edilen ürünün fiyatını 5 * quantity artırır.
-    - Diğer ürünlerin fiyatını 1 * quantity azaltır (0'ın altına düşmez).
+    - fixed_mode açıksa hiçbir fiyat değişmez.
+    - fixed_mode kapalıysa:
+        * Sipariş edilen ürünün fiyatını 5 * quantity artırır.
+        * Diğer ürünlerin fiyatını 1 * quantity azaltır (0'ın altına düşmez).
     """
+    if is_fixed_mode_active():
+        # Fiyat sabitleme modunda fiyatlar değişmeyecek
+        return
+
     try:
         quantity = int(quantity)
     except ValueError:
@@ -173,7 +297,6 @@ def update_prices_after_order(ordered_product_id, quantity=1):
 
     conn.commit()
     conn.close()
-
 
 # ---------- Streamlit UI ----------
 def admin_page():
@@ -212,6 +335,28 @@ def admin_page():
         if st.button("Fiyatı Güncelle"):
             update_product_price(selected_product_id, new_price2)
             st.success("Fiyat güncellendi.")
+            st.rerun()
+
+    # ---------- Fiyat Sabitleme Modu ----------
+    st.subheader("Fiyat Sabitleme (Borsa Modu Durdur)")
+
+    fixed_active = is_fixed_mode_active()
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # Yeşil Başlat
+        start_disabled = fixed_active
+        if st.button("🟢 Başlat", disabled=start_disabled):
+            apply_fixed_prices()
+            st.success("Fiyat sabitleme modu başlatıldı.")
+            st.rerun()
+
+    with col2:
+        # Kırmızı Bitir
+        stop_disabled = not fixed_active
+        if st.button("🔴 Bitir", disabled=stop_disabled):
+            restore_prices_from_backup()
+            st.success("Fiyat sabitleme modu sonlandırıldı.")
             st.rerun()
 
 
@@ -262,7 +407,6 @@ def tables_page():
 
                 # Çoklu ürün siparişi ekleme bölümü
                 with st.expander("Sipariş Ekle"):
-                    # Anlık fiyatlarla ürünleri çek
                     products = get_products()
 
                     selected_products = []
@@ -276,14 +420,15 @@ def tables_page():
                         with c2:
                             st.write(f"{p['price']} ₺")
                         with c3:
-                            qty = st.number_input(
+                            # 🚩 Burayı değiştirdik: number_input yerine selectbox
+                            qty = st.selectbox(
                                 "Adet",
-                                min_value=0,
-                                step=1,
+                                options=list(range(1, 11)),
                                 key=f"qty_{table_id}_{p['id']}",
                             )
 
-                        if checked and qty > 0:
+                        if checked:
+                            # Seçilen ürünler: (id, adet, o anki fiyat)
                             selected_products.append((p["id"], qty, p["price"]))
 
                     if st.button("Siparişi Kaydet", key=f"add_{table_id}"):
@@ -294,11 +439,12 @@ def tables_page():
                             for prod_id, qty, price_now in selected_products:
                                 add_order(table_id, prod_id, price_now, qty)
 
-                            # 2) Borsa bar mantığı: her ürün için fiyatları güncelle
-                            for prod_id, qty, _ in selected_products:
-                                update_prices_after_order(prod_id, qty)
+                            # 2) fixed_mode kapalıysa borsa mantığı ile fiyatları güncelle
+                            if not is_fixed_mode_active():
+                                for prod_id, qty, _ in selected_products:
+                                    update_prices_after_order(prod_id, qty)
 
-                            st.success("Siparişler eklendi ve fiyatlar güncellendi.")
+                            st.success("Siparişler eklendi.")
                             st.rerun()
 
 
