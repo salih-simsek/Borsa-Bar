@@ -6,104 +6,115 @@
     <title>Deepeak Giriş</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0f1115; color: white; }
-        .glass-panel { background: rgba(26, 29, 36, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .input-field { background: rgba(0,0,0,0.3); border: 1px solid #374151; color: white; transition: all 0.3s; }
-        .input-field:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .glass-panel { background: rgba(26, 29, 36, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
+        .input-field { background: rgba(0,0,0,0.4); border: 1px solid #374151; color: white; transition: all 0.3s; }
+        .input-field:focus { border-color: #FFB300; outline: none; box-shadow: 0 0 0 2px rgba(255, 179, 0, 0.2); }
+        
+        .btn-brand {
+            background: linear-gradient(135deg, #FF3D00 0%, #FFB300 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-brand:hover {
+            filter: brightness(1.1);
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(255, 61, 0, 0.4);
+        }
     </style>
 </head>
-<body class="h-screen w-screen flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
+<body class="h-screen w-screen flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center overflow-hidden">
     
     <!-- Karartma Katmanı -->
-    <div class="absolute inset-0 bg-black/80"></div>
+    <div class="absolute inset-0 bg-black/90"></div>
 
-    <!-- 1. GİRİŞ EKRANI -->
-    <div id="login-section" class="relative z-10 w-full max-w-md p-8 glass-panel rounded-2xl shadow-2xl animate-fade-in">
-        <div class="text-center mb-8">
-            <div class="flex justify-center mb-4">
-                <img src="Gemini_Generated_Image_7io5507io5507io5.jpg" class="h-12 object-contain drop-shadow-lg" alt="Logo" onerror="this.style.display='none'">
+    <!-- 1. GİRİŞ EKRANI (LOGIN) -->
+    <div id="login-section" class="relative z-10 w-full max-w-md p-8 glass-panel rounded-2xl shadow-2xl animate-fade-in border-t-4 border-[#FF3D00]">
+        <div class="text-center mb-10">
+            <div class="flex justify-center">
+                <!-- ANA LOGO BÜYÜTÜLDÜ (h-16 -> h-24) -->
+                <img src="deepeak_ana_logo.png" class="h-24 object-contain drop-shadow-lg" alt="Deepeak Logo">
             </div>
-            <h1 class="text-2xl font-bold font-['Montserrat'] tracking-wider">BAR BORSASI</h1>
-            <p class="text-gray-400 text-sm mt-1">Yetkili Giriş Paneli</p>
+            <p class="text-gray-500 text-xs mt-4 tracking-[0.3em] uppercase font-bold">Yetkili Giriş Sistemi</p>
         </div>
 
-        <form onsubmit="handleLogin(event)" class="space-y-5">
+        <form onsubmit="handleLogin(event)" class="space-y-6">
             <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">Kullanıcı Adı</label>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Kullanıcı Adı</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500"><i data-lucide="user" class="w-5 h-5"></i></div>
-                    <input type="text" id="username" class="input-field w-full pl-10 pr-4 py-3 rounded-lg" placeholder="Kullanıcı adınızı girin" required>
+                    <input type="text" id="username" class="input-field w-full pl-10 pr-4 py-3.5 rounded-xl" placeholder="admin" required>
                 </div>
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">Şifre</label>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Şifre</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500"><i data-lucide="lock" class="w-5 h-5"></i></div>
-                    <input type="password" id="password" class="input-field w-full pl-10 pr-4 py-3 rounded-lg" placeholder="••••••••" required>
+                    <input type="password" id="password" class="input-field w-full pl-10 pr-4 py-3.5 rounded-xl" placeholder="••••" required>
                 </div>
             </div>
 
-            <div id="error-msg" class="hidden text-red-500 text-sm text-center bg-red-900/20 p-2 rounded border border-red-800">
+            <div id="error-msg" class="hidden text-red-400 text-sm text-center bg-red-900/30 p-3 rounded-lg border border-red-800/50 font-bold">
                 Hatalı kullanıcı adı veya şifre!
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition transform hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-900/50">
-                GİRİŞ YAP
+            <button type="submit" class="w-full btn-brand font-bold py-4 rounded-xl shadow-lg tracking-wide uppercase text-sm">
+                Sisteme Giriş Yap
             </button>
         </form>
         
-        <div class="mt-6 text-center text-xs text-gray-500">
-            &copy; 2024 DEEPEAK Technology. Tüm hakları saklıdır.
+        <div class="mt-8 text-center text-[10px] text-gray-600 font-mono uppercase">
+            &copy; 2025 DEEPEAK Technology Systems
         </div>
     </div>
 
     <!-- 2. DASHBOARD (SEÇİM EKRANI) -->
-    <div id="dashboard-section" class="relative z-10 w-full max-w-4xl p-8 hidden animate-fade-in">
-        <div class="text-center mb-10">
-            <h2 class="text-4xl font-bold font-['Montserrat'] text-white mb-2">Hoşgeldiniz</h2>
-            <p class="text-gray-400">Lütfen işlem yapmak istediğiniz ekranı seçiniz.</p>
+    <div id="dashboard-section" class="relative z-10 w-full max-w-6xl p-6 hidden flex-col justify-between min-h-[85vh] animate-fade-in">
+        
+        <!-- Başlık -->
+        <div class="text-center mt-8">
+            <!-- DASHBOARD LOGO BÜYÜTÜLDÜ (h-24 -> h-32) -->
+            <img src="deepeak_ana_logo.png" class="h-32 mx-auto mb-8 object-contain drop-shadow-[0_0_25px_rgba(255,61,0,0.4)] hover:scale-105 transition duration-500">
+            <p class="text-gray-400 text-lg font-light tracking-widest uppercase opacity-80">Yönetim Panelinizi Seçiniz</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Kartlar -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 px-4 md:px-12 my-8">
             <!-- Admin Kartı -->
-            <a href="admin.html" class="group relative overflow-hidden rounded-2xl glass-panel hover:border-blue-500 transition-all duration-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.3)] p-8 flex flex-col items-center justify-center text-center h-64 cursor-pointer">
-                <div class="bg-blue-900/30 p-4 rounded-full mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <i data-lucide="layout-dashboard" class="w-12 h-12 text-blue-400"></i>
+            <a href="admin.html" class="group relative overflow-hidden rounded-3xl glass-panel border border-[#FFB300]/20 hover:border-[#FFB300] transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,179,0,0.2)] p-8 flex flex-col items-center justify-center text-center h-64 cursor-pointer bg-gradient-to-b from-[#FFB300]/5 to-transparent hover:scale-[1.02]">
+                <div class="bg-[#FFB300] p-5 rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#FFB300]/30 ring-4 ring-[#FFB300]/20">
+                    <i data-lucide="layout-dashboard" class="w-10 h-10 text-black"></i>
                 </div>
-                <h3 class="text-2xl font-bold text-white mb-2">Yönetim Paneli</h3>
-                <p class="text-gray-400 text-sm">Ürün ekleme, stok takibi, satış işlemleri ve sistem ayarları.</p>
+                <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">Yönetim Paneli</h3>
+                <p class="text-gray-400 text-sm">Ürün, stok ve kasa işlemleri.</p>
             </a>
 
             <!-- TV Kartı -->
-            <a href="bar_borsasi_premium.html" target="_blank" class="group relative overflow-hidden rounded-2xl glass-panel hover:border-purple-500 transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] p-8 flex flex-col items-center justify-center text-center h-64 cursor-pointer">
-                <div class="bg-purple-900/30 p-4 rounded-full mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <i data-lucide="monitor-play" class="w-12 h-12 text-purple-400"></i>
+            <a href="bar_borsasi_premium.html" target="_blank" class="group relative overflow-hidden rounded-3xl glass-panel border border-[#FF3D00]/20 hover:border-[#FF3D00] transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,61,0,0.2)] p-8 flex flex-col items-center justify-center text-center h-64 cursor-pointer bg-gradient-to-b from-[#FF3D00]/5 to-transparent hover:scale-[1.02]">
+                <div class="bg-[#FF3D00] p-5 rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#FF3D00]/30 ring-4 ring-[#FF3D00]/20">
+                    <i data-lucide="monitor-play" class="w-10 h-10 text-white"></i>
                 </div>
-                <h3 class="text-2xl font-bold text-white mb-2">TV Ekranı</h3>
-                <p class="text-gray-400 text-sm">Müşteriler için canlı borsa ekranı. (Yeni sekmede açılır)</p>
+                <h3 class="text-2xl font-bold text-white mb-2 tracking-tight">TV Ekranı</h3>
+                <p class="text-gray-400 text-sm">Müşteri ekranını başlat.</p>
             </a>
         </div>
 
-        <div class="mt-12 text-center">
-            <button onclick="logout()" class="text-gray-500 hover:text-white flex items-center justify-center mx-auto gap-2 transition">
-                <i data-lucide="log-out" class="w-4 h-4"></i> Güvenli Çıkış
+        <!-- Çıkış Butonu -->
+        <div class="text-center mb-4">
+            <button onclick="logout()" class="group bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-12 rounded-full shadow-2xl flex items-center justify-center mx-auto gap-3 transition-all transform hover:scale-105 border border-gray-600/50 text-sm tracking-wider">
+                <i data-lucide="log-out" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i> 
+                GÜVENLİ ÇIKIŞ
             </button>
         </div>
     </div>
 
     <script>
         lucide.createIcons();
+        const CREDENTIALS = { username: "admin", password: "123" };
 
-        // Basit Güvenlik Kontrolü (Frontend Demo için)
-        const CREDENTIALS = {
-            username: "admin",
-            password: "123" // Burayı değiştirebilirsin
-        };
-
-        // Sayfa yüklendiğinde oturum kontrolü
         window.onload = () => {
             if (sessionStorage.getItem('isLoggedIn') === 'true') {
                 showDashboard();
@@ -121,7 +132,6 @@
                 showDashboard();
             } else {
                 errorMsg.classList.remove('hidden');
-                // Efekt: Titreme
                 const loginBox = document.getElementById('login-section');
                 loginBox.classList.add('animate-shake');
                 setTimeout(() => loginBox.classList.remove('animate-shake'), 500);
@@ -130,29 +140,24 @@
 
         function showDashboard() {
             document.getElementById('login-section').classList.add('hidden');
-            document.getElementById('dashboard-section').classList.remove('hidden');
-            document.getElementById('dashboard-section').classList.add('flex'); // Flex layout düzelsin diye
+            const dashboard = document.getElementById('dashboard-section');
+            dashboard.classList.remove('hidden');
+            dashboard.classList.add('flex');
         }
 
         function logout() {
-            sessionStorage.removeItem('isLoggedIn');
-            location.reload();
+            if(confirm("Çıkış yapmak istediğinize emin misiniz?")) {
+                sessionStorage.removeItem('isLoggedIn');
+                location.reload();
+            }
         }
     </script>
 
     <style>
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         .animate-shake { animation: shake 0.3s ease-in-out; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     </style>
 </body>
 </html>

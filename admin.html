@@ -13,17 +13,33 @@
         ::-webkit-scrollbar-track { background: #14161b; }
         ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #4a5568; }
-        .active-tab { background-color: rgba(30, 58, 138, 0.5); color: #60a5fa; border-left: 4px solid #3b82f6; }
-        .low-stock { border-color: #eab308 !important; }
-        .out-of-stock { opacity: 0.5; pointer-events: none; filter: grayscale(100%); border-color: #ef4444 !important; }
+        
+        .active-tab { 
+            background-color: rgba(255, 61, 0, 0.15); 
+            color: #FFB300; 
+            border-left: 4px solid #FF3D00; 
+        }
+        
+        .low-stock { border-color: #FFB300 !important; }
+        .out-of-stock { opacity: 0.5; pointer-events: none; filter: grayscale(100%); border-color: #FF3D00 !important; }
+        
+        /* Sepet Bildirimi Animasyonu */
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
     <aside class="w-64 bg-[#14161b] border-r border-gray-800 flex flex-col shrink-0">
-        <div class="p-6 flex items-center gap-3">
-            <img src="Gemini_Generated_Image_7io5507io5507io5.jpg" class="h-8 object-contain" alt="Logo" onerror="this.style.display='none'">
-            <div><h1 class="font-bold text-lg tracking-tight">DEEPEAK</h1><p class="text-xs text-gray-500">Yönetim Paneli v3.2</p></div>
+        <div class="p-6 flex flex-col gap-2">
+            <!-- ANA LOGO -->
+            <img src="deepeak_ana_logo.png" class="h-10 object-contain self-start" alt="Deepeak Logo">
+            
+            <!-- Müşteri Logosu (Dinamik) -->
+            <div class="flex items-center gap-2 mt-2 border-t border-gray-800 pt-2">
+                <img id="sidebar-client-logo" src="" class="h-6 w-auto object-contain hidden">
+                <p class="text-[10px] text-gray-600 font-mono tracking-widest uppercase ml-1">Yönetim Paneli v4.0</p>
+            </div>
         </div>
 
         <nav class="flex-1 px-4 space-y-2 mt-4">
@@ -34,17 +50,25 @@
         
         <div class="p-4 border-t border-gray-800 space-y-3">
             <div class="text-xs font-bold text-gray-500 uppercase">Sistem Kontrolleri</div>
-            <button onclick="triggerRoulette()" class="w-full bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 border border-yellow-600 p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i data-lucide="dices" class="w-4 h-4"></i> ŞANSLI ÜRÜN</button>
-            <button onclick="generateAiPrediction()" class="w-full bg-blue-900/30 hover:bg-blue-800/50 text-blue-300 border border-blue-700 p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i data-lucide="lightbulb" class="w-4 h-4"></i> ÖNERİ TETİKLE</button>
+            
+            <!-- Ayarlar Butonu -->
+            <button onclick="openSettingsModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition">
+                <i data-lucide="settings" class="w-4 h-4"></i> Firma Ayarları
+            </button>
+            
+            <button onclick="triggerRoulette()" class="w-full bg-[#FFB300]/20 hover:bg-[#FFB300]/40 text-[#FFB300] border border-[#FFB300] p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i data-lucide="dices" class="w-4 h-4"></i> ŞANSLI ÜRÜN</button>
+            <button onclick="generateAiPrediction()" class="w-full bg-[#FF3D00]/20 hover:bg-[#FF3D00]/40 text-[#FF3D00] border border-[#FF3D00] p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i data-lucide="lightbulb" class="w-4 h-4"></i> ÖNERİ TETİKLE</button>
+            
             <div class="h-px bg-gray-700 my-2"></div>
+            
             <div class="flex items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700">
                 <span class="text-sm text-gray-300">Oto. Piyasa</span>
-                <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="sim-toggle" class="sr-only peer" onchange="toggleSimulation()"><div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div></label>
+                <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="sim-toggle" class="sr-only peer" onchange="toggleSimulation()"><div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#10b981]"></div></label>
             </div>
+            
             <button onclick="sendCrash()" class="w-full bg-red-900/50 hover:bg-red-800 text-red-200 border border-red-700 p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"><i data-lucide="alert-triangle" class="w-4 h-4"></i> CRASH BAŞLAT</button>
         </div>
 
-        <!-- YENİ: ÇIKIŞ BUTONU -->
         <div class="p-4 bg-[#0f1115] border-t border-gray-800">
             <a href="index.html" class="flex items-center justify-center w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition text-sm">
                 <i data-lucide="log-out" class="w-4 h-4 mr-2"></i> Ana Menüye Dön
@@ -53,30 +77,49 @@
     </aside>
 
     <main class="flex-1 relative overflow-hidden flex flex-col">
-        <!-- POS EKRANI -->
+        
+        <!-- 1. POS EKRANI -->
         <div id="view-pos" class="h-full flex w-full">
             <div class="flex-1 p-6 overflow-y-auto">
-                <h2 class="text-2xl font-bold mb-6">Hızlı Satış <span class="text-sm font-normal text-gray-500 ml-2">(Stoklu)</span></h2>
+                <!-- Başlık Değiştirildi -->
+                <h2 class="text-3xl font-bold mb-6 text-white tracking-wide">Satış</h2>
                 <div class="grid grid-cols-3 xl:grid-cols-4 gap-4" id="pos-grid"></div>
             </div>
-            <div class="w-96 bg-[#1a1d24] border-l border-gray-800 flex flex-col h-full shrink-0">
+            
+            <div class="w-96 bg-[#1a1d24] border-l border-gray-800 flex flex-col h-full shrink-0 relative">
                 <div class="p-4 border-b border-gray-800"><h3 class="font-bold text-lg">Sepet</h3></div>
-                <div class="flex-1 overflow-y-auto p-4 space-y-2" id="cart-items"><div class="text-gray-500 text-center mt-10">Sepet Boş</div></div>
+                
+                <!-- Sepet Listesi -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-2 relative" id="cart-items-container">
+                    <div id="cart-items">
+                        <div class="text-gray-500 text-center mt-10">Sepet Boş</div>
+                    </div>
+                    
+                    <!-- BAŞARILI ÖDEME BİLDİRİMİ (Overlay) -->
+                    <div id="payment-success-overlay" class="absolute inset-0 bg-[#1a1d24]/95 backdrop-blur-sm hidden flex-col items-center justify-center z-10 toast-enter">
+                        <div class="bg-green-500/20 p-4 rounded-full mb-3 border border-green-500">
+                            <i data-lucide="check" class="w-10 h-10 text-green-500"></i>
+                        </div>
+                        <h4 class="text-xl font-bold text-white">Ödeme Alındı</h4>
+                        <p class="text-sm text-gray-400 mt-1" id="payment-method-text">Nakit İşlem</p>
+                    </div>
+                </div>
+                
                 <div class="p-6 bg-[#14161b] border-t border-gray-800">
-                    <div class="flex justify-between mb-4 text-xl font-bold"><span>TOPLAM</span><span class="text-blue-400" id="cart-total">0.00₺</span></div>
+                    <div class="flex justify-between mb-4 text-xl font-bold"><span>TOPLAM</span><span class="text-[#FFB300]" id="cart-total">0.00₺</span></div>
                     <div class="grid grid-cols-2 gap-3">
-                        <button onclick="processPayment('cash')" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition"><i data-lucide="banknote" class="w-5 h-5"></i> NAKİT</button>
-                        <button onclick="processPayment('credit')" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition"><i data-lucide="credit-card" class="w-5 h-5"></i> KART</button>
+                        <button onclick="processPayment('cash')" class="bg-[#10b981] hover:bg-green-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-green-900/20"><i data-lucide="banknote" class="w-5 h-5"></i> NAKİT</button>
+                        <button onclick="processPayment('credit')" class="bg-[#3b82f6] hover:bg-blue-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-blue-900/20"><i data-lucide="credit-card" class="w-5 h-5"></i> KART</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ÜRÜN YÖNETİMİ -->
+        <!-- 2. ÜRÜN YÖNETİMİ -->
         <div id="view-products" class="h-full p-8 overflow-y-auto w-full hidden">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-2xl font-bold">Ürün Listesi & Stok</h2>
-                <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Yeni Ürün Ekle</button>
+                <button onclick="openModal()" class="bg-[#FF3D00] hover:bg-red-600 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition"><i data-lucide="plus" class="w-4 h-4"></i> Yeni Ürün Ekle</button>
             </div>
             <div class="bg-[#1a1d24] rounded-xl border border-gray-800 overflow-hidden">
                 <table class="w-full text-left text-sm text-gray-400">
@@ -86,20 +129,26 @@
             </div>
         </div>
 
-        <!-- RAPORLAR -->
+        <!-- 3. RAPORLAR -->
         <div id="view-reports" class="h-full p-8 overflow-y-auto w-full hidden">
-            <h2 class="text-2xl font-bold mb-6">Gün Sonu Raporu</h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Gün Sonu Raporu</h2>
+                <button onclick="openHistoryModal()" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4"></i> Geçmiş Raporlar
+                </button>
+            </div>
+
             <div class="grid grid-cols-3 gap-6 mb-8">
-                <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-800"><div class="text-gray-500 text-sm mb-1">Toplam Ciro</div><div class="text-3xl font-bold text-green-400" id="report-revenue">0.00₺</div></div>
-                <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-800"><div class="text-gray-500 text-sm mb-1">Satış Adedi</div><div class="text-3xl font-bold text-blue-400" id="report-count">0</div></div>
-                <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-800"><div class="text-gray-500 text-sm mb-1">En Çok Satan</div><div class="text-xl font-bold text-yellow-400 truncate" id="report-bestseller">-</div></div>
+                <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-800"><div class="text-gray-500 text-sm mb-1">Toplam Ciro</div><div class="text-3xl font-bold text-[#FFB300]" id="report-revenue">0.00₺</div></div>
+                <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-800"><div class="text-gray-500 text-sm mb-1">Satış Adedi</div><div class="text-3xl font-bold text-[#FF3D00]" id="report-count">0</div></div>
+                <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-800"><div class="text-gray-500 text-sm mb-1">En Çok Satan</div><div class="text-xl font-bold text-white truncate" id="report-bestseller">-</div></div>
             </div>
             <div class="bg-[#1a1d24] rounded-xl border border-gray-800 overflow-hidden"><table class="w-full text-left text-sm text-gray-400"><thead class="bg-gray-800 text-gray-200 uppercase"><tr><th class="p-4">Ürün</th><th class="p-4 text-center">Adet</th><th class="p-4 text-right">Tutar</th></tr></thead><tbody id="sales-report-body"></tbody></table></div>
-            <div class="mt-6 flex justify-end"><button onclick="clearDay()" class="bg-red-900/50 hover:bg-red-900 text-red-200 px-4 py-2 rounded border border-red-800 text-sm flex items-center gap-2"><i data-lucide="trash-2" class="w-4 h-4"></i> Günü Sıfırla</button></div>
+            <div class="mt-6 flex justify-end"><button onclick="clearDay()" class="bg-red-900/50 hover:bg-red-900 text-red-200 px-4 py-2 rounded border border-red-800 text-sm flex items-center gap-2"><i data-lucide="archive" class="w-4 h-4"></i> Günü Tamamla ve Arşivle</button></div>
         </div>
     </main>
 
-    <!-- MODAL -->
+    <!-- ÜRÜN MODAL -->
     <div id="product-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
         <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-700 w-full max-w-md">
             <h3 class="text-xl font-bold mb-4" id="modal-title">Ürün Ekle</h3>
@@ -120,11 +169,56 @@
                     <div><label class="block text-xs text-gray-500 mb-1">Max</label><input type="number" id="p-max" class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg block w-full p-2.5" required></div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
-                    <div><label class="block text-xs text-gray-500 mb-1">Stok Adedi (ÖNEMLİ)</label><input type="number" id="p-stock" class="bg-gray-800 border border-blue-500 text-white text-sm rounded-lg block w-full p-2.5 font-bold" required value="50"></div>
+                    <div><label class="block text-xs text-gray-500 mb-1">Stok</label><input type="number" id="p-stock" class="bg-gray-800 border border-blue-500 text-white text-sm rounded-lg block w-full p-2.5 font-bold" required value="50"></div>
                     <div><label class="block text-xs text-gray-500 mb-1">Tip</label><select id="p-type" class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg block w-full p-2.5"><option value="HIGH">Yüksek Kar</option><option value="LOW">Düşük Kar</option></select></div>
                 </div>
-                <div class="flex justify-end gap-3 mt-6"><button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-400 hover:text-white">İptal</button><button type="submit" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg font-bold">Kaydet</button></div>
+                <div class="flex justify-end gap-3 mt-6"><button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-400 hover:text-white">İptal</button><button type="submit" class="bg-[#FF3D00] hover:bg-red-600 px-6 py-2 rounded-lg font-bold">Kaydet</button></div>
             </form>
+        </div>
+    </div>
+
+    <!-- AYARLAR MODAL (LOGO YÜKLEME) -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-700 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">Firma Ayarları</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2">Firma Logosu (PNG/JPG)</label>
+                    <div class="flex items-center gap-4">
+                        <div class="h-16 w-16 rounded-lg bg-gray-800 border border-gray-600 flex items-center justify-center overflow-hidden">
+                            <img id="settings-logo-preview" src="" class="max-h-full max-w-full hidden">
+                            <span id="settings-no-logo" class="text-xs text-gray-500">Yok</span>
+                        </div>
+                        <label class="cursor-pointer bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-sm font-bold transition">
+                            Logo Seç
+                            <input type="file" accept="image/*" class="hidden" onchange="handleLogoUpload(this)">
+                        </label>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-2">Bu logo ana ekranlarda Deepeak logosunun yanında görünecektir.</p>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button onclick="document.getElementById('settings-modal').classList.add('hidden'); document.getElementById('settings-modal').classList.remove('flex')" class="px-4 py-2 text-gray-400 hover:text-white">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GEÇMİŞ RAPORLAR MODAL -->
+    <div id="history-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-[#1a1d24] p-6 rounded-xl border border-gray-700 w-full max-w-2xl h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Rapor Geçmişi</h3>
+                <button onclick="document.getElementById('history-modal').classList.add('hidden'); document.getElementById('history-modal').classList.remove('flex')" class="text-gray-400 hover:text-white"><i data-lucide="x"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-gray-900/50 rounded-lg border border-gray-800 p-4">
+                <table class="w-full text-left text-sm text-gray-400">
+                    <thead class="text-gray-500 border-b border-gray-700">
+                        <tr><th class="pb-2">Tarih</th><th class="pb-2">Toplam Ciro</th><th class="pb-2">Satış Adedi</th></tr>
+                    </thead>
+                    <tbody id="history-table-body"></tbody>
+                </table>
+                <div id="no-history" class="text-center text-gray-600 mt-10 hidden">Henüz arşivlenmiş rapor yok.</div>
+            </div>
         </div>
     </div>
 
@@ -134,24 +228,59 @@
             { id: 1, name: "Efes Pilsen", price: 110, startPrice: 110, min: 90, max: 150, type: "HIGH", stock: 100, image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400" },
             { id: 2, name: "Bomonti", price: 120, startPrice: 120, min: 100, max: 160, type: "HIGH", stock: 80, image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400" }
         ];
+
         let products = JSON.parse(localStorage.getItem('bar_products')) || DEFAULT_PRODUCTS;
         let salesHistory = JSON.parse(localStorage.getItem('bar_sales')) || [];
+        let reportArchive = JSON.parse(localStorage.getItem('bar_reports_archive')) || [];
+        let customLogo = localStorage.getItem('bar_settings_logo');
         let cart = [];
         let simInterval = null;
 
         function init() {
-            // Giriş kontrolü: Eğer direkt admin.html açılırsa ve giriş yapılmamışsa index.html'e at
-            if(sessionStorage.getItem('isLoggedIn') !== 'true') {
-                // window.location.href = 'index.html'; // Geliştirme aşamasında yorum satırı yapabilirsin
-            }
-
             lucide.createIcons();
             renderPOS();
             renderProductsTable();
             renderReports();
+            loadSettings();
             setTimeout(() => broadcastUpdate('SYNC', products), 500);
         }
 
+        // --- LOGO YÖNETİMİ ---
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('settings-modal').classList.add('flex');
+            if(customLogo) {
+                document.getElementById('settings-logo-preview').src = customLogo;
+                document.getElementById('settings-logo-preview').classList.remove('hidden');
+                document.getElementById('settings-no-logo').classList.add('hidden');
+            }
+        }
+
+        function handleLogoUpload(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                customLogo = e.target.result;
+                localStorage.setItem('bar_settings_logo', customLogo);
+                document.getElementById('settings-logo-preview').src = customLogo;
+                document.getElementById('settings-logo-preview').classList.remove('hidden');
+                document.getElementById('settings-no-logo').classList.add('hidden');
+                loadSettings(); // Kendini güncelle
+                broadcastUpdate('SETTINGS_UPDATE', { logo: customLogo }); // TV'ye haber ver
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadSettings() {
+            if(customLogo) {
+                const sidebarLogo = document.getElementById('sidebar-client-logo');
+                sidebarLogo.src = customLogo;
+                sidebarLogo.classList.remove('hidden');
+            }
+        }
+
+        // --- DOSYA İŞLEMLERİ ---
         function handleFileSelect(input) {
             const file = input.files[0];
             if (file) {
@@ -168,6 +297,7 @@
             }
         }
 
+        // --- TABLAR ---
         function switchTab(tabId) {
             document.querySelectorAll('main > div').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
@@ -177,6 +307,7 @@
             if(tabId === 'reports') renderReports();
         }
 
+        // --- POS ---
         function renderPOS() {
             const grid = document.getElementById('pos-grid');
             if (!grid) return;
@@ -184,18 +315,19 @@
             products.forEach(p => {
                 const isOutOfStock = p.stock <= 0;
                 const isLowStock = p.stock < 10 && p.stock > 0;
-                const stockClass = isOutOfStock ? 'out-of-stock' : (isLowStock ? 'low-stock border-yellow-500' : 'border-gray-800');
-                const stockLabel = isOutOfStock ? '<span class="text-red-500 font-bold">TÜKENDİ</span>' : `<span class="${isLowStock ? 'text-yellow-500' : 'text-gray-400'}">Stok: ${p.stock}</span>`;
+                const stockClass = isOutOfStock ? 'out-of-stock' : (isLowStock ? 'low-stock border-[#FFB300]' : 'border-gray-800');
+                const stockLabel = isOutOfStock ? '<span class="text-red-500 font-bold">TÜKENDİ</span>' : `<span class="${isLowStock ? 'text-[#FFB300]' : 'text-gray-400'}">Stok: ${p.stock}</span>`;
 
                 const el = document.createElement('div');
-                el.className = `bg-[#1a1d24] p-4 rounded-xl border cursor-pointer hover:border-blue-500 transition group relative overflow-hidden shadow-lg ${stockClass}`;
+                el.className = `bg-[#1a1d24] p-4 rounded-xl border cursor-pointer hover:border-[#FF3D00] transition group relative overflow-hidden shadow-lg ${stockClass}`;
                 el.onclick = () => { if(!isOutOfStock) addToCart(p); };
                 
+                // Fiyat Rengi BEYAZ ve BÜYÜK (İstek 2)
                 el.innerHTML = `
                     <img src="${p.image}" class="w-full h-24 object-cover rounded-lg mb-3 opacity-70 group-hover:opacity-100 transition bg-gray-800" onerror="this.style.display='none'">
                     <div class="font-bold truncate text-sm text-gray-200">${p.name}</div>
-                    <div class="flex justify-between items-center mt-1">
-                        <div class="text-blue-400 font-mono font-bold">${p.price}₺</div>
+                    <div class="flex justify-between items-center mt-2">
+                        <div class="text-white font-mono font-bold text-2xl">${p.price}₺</div>
                         <div class="text-xs">${stockLabel}</div>
                     </div>
                     <div class="absolute top-2 right-2 bg-gray-900/80 px-2 py-1 rounded text-xs text-gray-400">${p.type === 'HIGH' ? '🔥' : '🛡️'}</div>
@@ -206,10 +338,8 @@
 
         function addToCart(p) {
             const ex = cart.find(c => c.id === p.id);
-            // Stok Kontrolü (Sepetteki miktar stoktan fazlaysa ekleme)
             const currentQty = ex ? ex.qty : 0;
             if(currentQty >= p.stock) return alert("Yetersiz Stok!");
-
             if(ex) ex.qty++; else cart.push({ ...p, qty: 1 });
             updateCartUI();
         }
@@ -217,13 +347,22 @@
         function updateCartUI() {
             const cont = document.getElementById('cart-items');
             if (!cont) return;
+            
+            // Sepet boşsa overlay gizli kalsın
+            const overlay = document.getElementById('payment-success-overlay');
+            if(overlay && !overlay.classList.contains('hidden') && cart.length > 0) {
+                 // Eğer yeni ürün eklenirse başarı mesajını gizle
+                 overlay.classList.add('hidden');
+                 overlay.classList.remove('flex');
+            }
+
             cont.innerHTML = '';
             let total = 0;
             cart.forEach((item, index) => {
                 total += item.price * item.qty;
                 const el = document.createElement('div');
                 el.className = 'flex justify-between items-center bg-[#14161b] p-3 rounded border border-gray-800 mb-2';
-                el.innerHTML = `<div><div class="font-bold text-sm text-gray-200">${item.name}</div><div class="text-xs text-gray-500">${item.price}₺ x ${item.qty}</div></div><div class="flex items-center gap-3"><span class="font-mono font-bold text-blue-400">${(item.price * item.qty)}₺</span><button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
+                el.innerHTML = `<div><div class="font-bold text-sm text-gray-200">${item.name}</div><div class="text-xs text-gray-500">${item.price}₺ x ${item.qty}</div></div><div class="flex items-center gap-3"><span class="font-mono font-bold text-[#FFB300]">${(item.price * item.qty)}₺</span><button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
                 cont.appendChild(el);
             });
             if(cart.length === 0) cont.innerHTML = '<div class="text-gray-500 text-center mt-10">Sepet Boş</div>';
@@ -236,7 +375,6 @@
         function processPayment(method) {
             if(cart.length === 0) return alert("Sepet boş!");
             
-            // En çok satılan ürünü bul
             let topItem = cart.reduce((prev, current) => (prev.qty > current.qty) ? prev : current);
             let salesMessage = `🔥 SON DAKİKA: ${topItem.name} KAPIS KAPIS GİDİYOR! FİYATLAR DEĞİŞTİ!`;
 
@@ -244,14 +382,10 @@
             salesHistory.push(saleRecord);
             localStorage.setItem('bar_sales', JSON.stringify(salesHistory));
             
-            // Fiyat ve Stok Güncelleme
             cart.forEach(item => {
                 const p = products.find(pr => pr.id === item.id);
                 if(p) {
-                    // Stok Düş
                     p.stock = Math.max(0, p.stock - item.qty);
-
-                    // Fiyat Artır (Sadece stok varsa)
                     if(p.stock > 0) {
                         const inc = p.type === 'HIGH' ? 10 : 5;
                         p.price = Math.min(p.max, p.price + (inc * item.qty));
@@ -259,9 +393,8 @@
                 }
             });
             
-            // Dengeleme (Sepette olmayanları düşür)
             products.forEach(p => {
-                if(!cart.find(c => c.id === p.id) && p.stock > 0) { // Stok yoksa fiyat düşmesin
+                if(!cart.find(c => c.id === p.id) && p.stock > 0) {
                     let drop = p.type === 'HIGH' ? 5 : 2;
                     p.price = Math.max(p.min, p.price - drop);
                 }
@@ -269,22 +402,44 @@
 
             saveAndBroadcast();
             broadcastUpdate('TICKER_UPDATE', salesMessage);
-
+            
+            // SEPET BİLDİRİMİ (İstek 5)
+            showPaymentSuccess(method);
+            
             cart = [];
-            updateCartUI();
+            // updateCartUI'yi hemen çağırmıyoruz, overlay görünmesi için manuel temizliyoruz
+            document.getElementById('cart-items').innerHTML = '<div class="text-gray-500 text-center mt-10">Sepet Boş</div>';
+            document.getElementById('cart-total').innerText = '0.00₺';
+
             renderPOS();
-            alert("Satış Tamamlandı! Stoklar güncellendi.");
         }
 
+        function showPaymentSuccess(method) {
+            const overlay = document.getElementById('payment-success-overlay');
+            const text = document.getElementById('payment-method-text');
+            
+            text.innerText = method === 'cash' ? 'Nakit Ödeme Tamamlandı' : 'Kartla Ödeme Tamamlandı';
+            
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            
+            // 2 saniye sonra kaybolsun
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }, 2000);
+        }
+
+        // --- ÜRÜN YÖNETİMİ ---
         function renderProductsTable() {
             const tbody = document.getElementById('products-table-body');
             if (!tbody) return;
             tbody.innerHTML = '';
             products.forEach(p => {
-                const stockColor = p.stock === 0 ? 'text-red-500' : (p.stock < 10 ? 'text-yellow-500' : 'text-green-500');
+                const stockColor = p.stock === 0 ? 'text-red-500' : (p.stock < 10 ? 'text-[#FFB300]' : 'text-[#10b981]');
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-gray-800 hover:bg-gray-800/50';
-                tr.innerHTML = `<td class="p-4 flex items-center gap-3"><img src="${p.image}" class="w-10 h-10 rounded object-cover bg-gray-700" onerror="this.style.display='none'"><div><div class="font-bold text-gray-200">${p.name}</div><div class="text-xs text-gray-500">Başlangıç: ${p.startPrice}₺</div></div></td><td class="p-4 font-mono text-blue-400 font-bold">${p.price}₺ <span class="text-xs text-gray-500 font-normal ml-1">(${p.min} - ${p.max})</span></td><td class="p-4 font-bold ${stockColor}">${p.stock} Adet</td><td class="p-4 text-right"><button onclick="editProduct(${p.id})" class="text-blue-500 hover:text-white p-2 rounded hover:bg-blue-600 transition mr-2"><i data-lucide="pencil"></i></button><button onclick="deleteProduct(${p.id})" class="text-red-500 hover:text-white p-2 rounded hover:bg-red-600 transition"><i data-lucide="trash"></i></button></td>`;
+                tr.innerHTML = `<td class="p-4 flex items-center gap-3"><img src="${p.image}" class="w-10 h-10 rounded object-cover bg-gray-700" onerror="this.style.display='none'"><div><div class="font-bold text-gray-200">${p.name}</div><div class="text-xs text-gray-500">Başlangıç: ${p.startPrice}₺</div></div></td><td class="p-4 font-mono text-[#FF3D00] font-bold">${p.price}₺ <span class="text-xs text-gray-500 font-normal ml-1">(${p.min} - ${p.max})</span></td><td class="p-4 font-bold ${stockColor}">${p.stock} Adet</td><td class="p-4 text-right"><button onclick="editProduct(${p.id})" class="text-blue-500 hover:text-white p-2 rounded hover:bg-blue-600 transition mr-2"><i data-lucide="pencil"></i></button><button onclick="deleteProduct(${p.id})" class="text-red-500 hover:text-white p-2 rounded hover:bg-red-600 transition"><i data-lucide="trash"></i></button></td>`;
                 tbody.appendChild(tr);
             });
             lucide.createIcons();
@@ -303,7 +458,7 @@
             document.getElementById('p-min').value = p.min;
             document.getElementById('p-max').value = p.max;
             document.getElementById('p-type').value = p.type;
-            document.getElementById('p-stock').value = p.stock; // Stok yükle
+            document.getElementById('p-stock').value = p.stock;
             document.getElementById('p-image-base64').value = p.image;
             const preview = document.getElementById('p-image-preview');
             preview.src = p.image; preview.classList.remove('hidden');
@@ -323,14 +478,13 @@
                 min: parseInt(document.getElementById('p-min').value),
                 max: parseInt(document.getElementById('p-max').value),
                 type: document.getElementById('p-type').value,
-                stock: parseInt(document.getElementById('p-stock').value) // Stok kaydet
+                stock: parseInt(document.getElementById('p-stock').value)
             };
 
             if(id) {
                 const idx = products.findIndex(p => p.id == id);
                 if(idx > -1) {
                     let current = products[idx].price;
-                    // Limit kontrolleri
                     if(current < pData.min) current = pData.min;
                     if(current > pData.max) current = pData.max;
                     products[idx] = { ...products[idx], ...pData, price: current, startPrice: pData.startPrice };
@@ -346,10 +500,8 @@
         function toggleSimulation() {
             if (document.getElementById('sim-toggle').checked) {
                 simInterval = setInterval(() => {
-                    // Sadece stoğu olanları oyna
                     const availableProducts = products.filter(p => p.stock > 0);
                     if(availableProducts.length === 0) return;
-
                     const rnd = availableProducts[Math.floor(Math.random() * availableProducts.length)];
                     const chg = Math.random() > 0.5 ? 5 : -5;
                     let nP = rnd.price + chg;
@@ -362,7 +514,9 @@
         function triggerRoulette() { channel.postMessage({ type: 'ROULETTE_START' }); }
         function generateAiPrediction() { channel.postMessage({ type: 'AI_PREDICTION' }); }
 
+        // --- RAPORLAMA ---
         function renderReports() {
+            // Anlık (Aktif) Rapor
             const salesMap = {}; let tRev = 0; let tCount = 0;
             salesHistory.forEach(s => s.items.forEach(i => {
                 if(!salesMap[i.name]) salesMap[i.name] = { count: 0, total: 0 };
@@ -377,11 +531,60 @@
             const tbody = document.getElementById('sales-report-body');
             if(!tbody) return; tbody.innerHTML = '';
             Object.entries(salesMap).forEach(([n, d]) => {
-                tbody.innerHTML += `<tr class="border-b border-gray-800"><td class="p-4 font-bold text-gray-200">${n}</td><td class="p-4 text-center text-gray-400">${d.count}</td><td class="p-4 text-right font-mono text-green-400 font-bold">${d.total}₺</td></tr>`;
+                tbody.innerHTML += `<tr class="border-b border-gray-800"><td class="p-4 font-bold text-gray-200">${n}</td><td class="p-4 text-center text-gray-400">${d.count}</td><td class="p-4 text-right font-mono text-[#FFB300] font-bold">${d.total}₺</td></tr>`;
             });
         }
+        
+        // Geçmiş Raporları Görüntüle
+        function openHistoryModal() {
+            document.getElementById('history-modal').classList.remove('hidden');
+            document.getElementById('history-modal').classList.add('flex');
+            const container = document.getElementById('history-table-body');
+            container.innerHTML = '';
+            
+            if(reportArchive.length === 0) {
+                document.getElementById('no-history').classList.remove('hidden');
+            } else {
+                document.getElementById('no-history').classList.add('hidden');
+                // Tersine sırala (en yeni en üstte)
+                [...reportArchive].reverse().forEach(r => {
+                    container.innerHTML += `
+                        <tr class="border-b border-gray-700 hover:bg-gray-700/50">
+                            <td class="py-3 text-gray-300">${new Date(r.date).toLocaleString('tr-TR')}</td>
+                            <td class="py-3 font-mono text-[#FFB300]">${r.revenue}₺</td>
+                            <td class="py-3 text-blue-400">${r.count}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
 
-        function clearDay() { if(confirm('Raporlar silinsin mi?')) { salesHistory = []; localStorage.setItem('bar_sales', JSON.stringify([])); renderReports(); } }
+        function clearDay() {
+            if(confirm('Günü tamamlayıp raporu arşive kaydetmek istiyor musunuz?')) {
+                // Mevcut verileri hesapla
+                let tRev = 0; let tCount = 0;
+                salesHistory.forEach(s => s.items.forEach(i => {
+                    tRev += (i.price * i.qty); tCount += i.qty;
+                }));
+
+                // Arşive Ekle
+                const report = {
+                    date: new Date().toISOString(),
+                    revenue: tRev,
+                    count: tCount,
+                    details: salesHistory // İstenirse detay da saklanabilir
+                };
+                reportArchive.push(report);
+                localStorage.setItem('bar_reports_archive', JSON.stringify(reportArchive));
+
+                // Günü Sıfırla
+                salesHistory = [];
+                localStorage.setItem('bar_sales', JSON.stringify([]));
+                renderReports();
+                alert("Gün sonu alındı ve arşivlendi.");
+            }
+        }
+
         function saveAndBroadcast() { localStorage.setItem('bar_products', JSON.stringify(products)); broadcastUpdate('UPDATE', products); }
         function broadcastUpdate(type, data) { channel.postMessage({ type: type, data: data }); }
 

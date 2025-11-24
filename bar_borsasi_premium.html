@@ -18,8 +18,12 @@
             color: var(--text-primary); font-family: 'Montserrat', sans-serif; overflow: hidden; height: 100vh;
         }
         .header-premium { background: rgba(20, 22, 27, 0.98); border-bottom: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0,0,0,0.6); }
-        .main-logo { height: 60px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4)); }
-        .sub-logo { height: 35px; width: auto; object-fit: contain; opacity: 0.9; filter: grayscale(20%); }
+        
+        .main-logo { height: 90px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255, 61, 0, 0.4)); }
+        
+        /* YENİ LOGO AYARI: Ana logodan küçük olmalı */
+        .sub-logo { height: 50px; max-height: 60px; width: auto; object-fit: contain; opacity: 0.9; filter: grayscale(10%); }
+        
         .grid-layout { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); gap: 12px; height: calc(100vh - 100px); padding: 15px; }
         
         /* Kart Tasarımı */
@@ -43,23 +47,25 @@
         /* SOLD OUT */
         .sold-out-card { opacity: 0.6; filter: grayscale(100%); border-color: #444; }
         .sold-out-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 50; }
-        .sold-out-stamp { font-family: 'Oswald', sans-serif; font-size: 2.5rem; color: #ef4444; border: 4px solid #ef4444; padding: 5px 20px; transform: rotate(-15deg); text-transform: uppercase; font-weight: 900; letter-spacing: 2px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+        .sold-out-stamp { font-family: 'Oswald', sans-serif; font-size: 2.5rem; color: var(--color-down); border: 4px solid var(--color-down); padding: 5px 20px; transform: rotate(-15deg); text-transform: uppercase; font-weight: 900; letter-spacing: 2px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); box-shadow: 0 0 20px rgba(255, 61, 0, 0.3); }
 
         /* Spotlight & Roulette */
-        .spotlight-active { border: 2px solid var(--color-gold) !important; box-shadow: 0 0 40px rgba(212, 175, 55, 0.2) !important; z-index: 50; transform: scale(1.03); background-color: #1e2026 !important; }
+        .spotlight-active { border: 2px solid var(--color-gold) !important; box-shadow: 0 0 40px rgba(255, 179, 0, 0.2) !important; z-index: 50; transform: scale(1.03); background-color: #1e2026 !important; }
         .spotlight-active::after { content: "★ GECENİN YILDIZI"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--color-gold); color: #000; padding: 3px 10px; border-radius: 4px; font-weight: 800; font-size: 0.65rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); white-space: nowrap; font-family: 'Montserrat', sans-serif; letter-spacing: 1px; z-index: 60; }
         .roulette-highlight { border: 4px solid #ffffff !important; box-shadow: 0 0 50px #ffffff, inset 0 0 30px #ffffff !important; z-index: 60; transform: scale(1.05); background: #333 !important; }
 
-        /* Ticker & Others */
+        /* Ticker */
         .ticker-container { overflow: hidden; position: relative; background: transparent; border: none; display: flex; align-items: center; justify-content: center; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); }
-        .ticker-content { display: inline-block; white-space: nowrap; font-family: 'Roboto Mono', monospace; color: #fbbf24; font-weight: 700; font-size: 1.4rem; letter-spacing: -0.5px; opacity: 1; transition: opacity 0.5s ease-in-out; text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(251, 191, 36, 0.2); width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+        .ticker-content { display: inline-block; white-space: nowrap; font-family: 'Roboto Mono', monospace; color: var(--color-gold); font-weight: 600; font-size: 1.3rem; letter-spacing: -0.5px; opacity: 1; transition: opacity 0.5s ease-in-out; text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(255, 179, 0, 0.2); width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; }
         .ticker-content.fade-out { opacity: 0; }
+        
+        /* Bar & Crash */
         .price-bar-bg { width: 100%; height: 3px; background: #2d3748; margin-top: 10px; border-radius: 1px; overflow: hidden; }
         .price-bar-fill { height: 100%; width: 50%; background: #4b5563; transition: width 1s ease, background-color 0.3s; }
         #crash-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 15, 0.98); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; }
-        .crash-active-grid .drink-card { background: #220a0a; border-color: #7f1d1d; } .crash-active-grid .drink-price { color: #f87171; }
-        .crash-title { font-family: 'Oswald', sans-serif; font-size: 8rem; color: #ef4444; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; border-bottom: 4px solid #ef4444; padding-bottom: 20px; }
-        .crash-timer-box { font-family: 'Roboto Mono', monospace; font-size: 6rem; color: #fff; font-weight: 700; margin-top: 40px; background: #ef4444; padding: 0 40px; border-radius: 8px; }
+        .crash-active-grid .drink-card { background: #2a1515; border-color: var(--color-down); } .crash-active-grid .drink-price { color: var(--color-down); }
+        .crash-title { font-family: 'Oswald', sans-serif; font-size: 8rem; color: var(--color-down); font-weight: 700; letter-spacing: 5px; text-transform: uppercase; border-bottom: 4px solid var(--color-down); padding-bottom: 20px; }
+        .crash-timer-box { font-family: 'Roboto Mono', monospace; font-size: 6rem; color: #fff; font-weight: 700; margin-top: 40px; background: var(--color-down); padding: 0 40px; border-radius: 8px; }
         .scanline { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 999; opacity: 0.3; }
     </style>
 </head>
@@ -67,9 +73,14 @@
     <div class="scanline"></div>
     <div class="h-24 header-premium flex items-center px-8 justify-between relative z-10">
         <div class="flex items-center w-auto shrink-0"> 
-            <img src="Gemini_Generated_Image_7io5507io5507io5.jpg" alt="Deepeak Ana Logo" class="main-logo">
+            <!-- DEEPEAK Ana Logo -->
+            <img src="deepeak_ana_logo.png" alt="Deepeak Ana Logo" class="main-logo">
+            
             <div class="h-8 w-px bg-gray-700 mx-5"></div>
-            <img src="kereviz logo.jpg" alt="Kereviz İşletme Logosu" class="sub-logo">
+            
+            <!-- Müşteri Logosu (Dinamik) -->
+            <!-- src özelliği JS ile doldurulacak -->
+            <img id="tv-client-logo" src="kereviz logo.jpg" alt="İşletme Logosu" class="sub-logo">
         </div>
         <div class="flex-1 h-12 flex items-center justify-center relative ticker-container mx-6">
             <!-- Varsayılan olarak Self Servis Mesajı -->
@@ -89,7 +100,7 @@
     </div>
 
     <div id="crash-overlay">
-        <div class="text-red-500 text-2xl font-[Montserrat] tracking-[0.5em] font-bold mb-4 uppercase">Piyasa Askıya Alındı</div>
+        <div class="text-[#FF3D00] text-2xl font-[Montserrat] tracking-[0.5em] font-bold mb-4 uppercase">Piyasa Askıya Alındı</div>
         <div class="crash-title">ÇÖKÜŞ ANI</div>
         <div class="text-gray-400 mt-6 font-[Montserrat] text-xl">TÜM VARLIKLAR TABAN FİYATTA İŞLEM GÖRÜYOR</div>
         <div class="crash-timer-box" id="crash-timer">00:10</div>
@@ -100,7 +111,6 @@
         let products = JSON.parse(localStorage.getItem('bar_products')) || [];
         const apiKey = ""; 
         
-        // Ana mesaj
         const SELF_SERVICE_MSG = "⚠️ SADECE SELF SERVİS HİZMET VERİLMEKTEDİR. LÜTFEN KASADAN SİPARİŞ VERİNİZ. ⚠️";
         
         let tickerInterval;
@@ -108,17 +118,23 @@
         function init() {
             if (products.length > 0) renderGrid();
             updateClock();
+            loadSettings(); // Logoyu yükle
             setInterval(updateClock, 1000);
-            // İlk başlangıçta mesajı göster
             updateTickerText(SELF_SERVICE_MSG);
         }
+        
+        function loadSettings() {
+            const customLogo = localStorage.getItem('bar_settings_logo');
+            if(customLogo) {
+                document.getElementById('tv-client-logo').src = customLogo;
+            }
+        }
 
-        // Mesajı 15 saniye sonra Self Servis'e döndüren fonksiyon
         function resetTickerToDefault() {
             if(tickerInterval) clearTimeout(tickerInterval);
             tickerInterval = setTimeout(() => {
                 updateTickerText(SELF_SERVICE_MSG);
-            }, 10000); // 10 saniye sonra ana mesaja dön
+            }, 10000); 
         }
 
         channel.onmessage = (event) => {
@@ -132,11 +148,13 @@
             } else if (type === 'ROULETTE_START') {
                 startRoulette();
             } else if (type === 'TICKER_UPDATE') {
-                // Satış veya önemli bir duyuru geldiğinde bunu göster
                 updateTickerText(data);
-                resetTickerToDefault(); // Sonra ana mesaja dön
+                resetTickerToDefault(); 
             } else if (type === 'AI_PREDICTION') {
                 generateAiPrediction();
+            } else if (type === 'SETTINGS_UPDATE') {
+                // Logo güncellendiğinde canlı değiş
+                if(data.logo) document.getElementById('tv-client-logo').src = data.logo;
             }
         };
 
@@ -152,7 +170,7 @@
 
         function createCard(p) {
             const grid = document.getElementById('grid');
-            const flame = p.type === 'HIGH' ? '<span class="absolute top-2 right-2 text-orange-500 animate-pulse text-lg">🔥</span>' : '';
+            const flame = p.type === 'HIGH' ? '<span class="absolute top-2 right-2 text-[#FF3D00] animate-pulse text-lg">🔥</span>' : '';
             const isSoldOut = p.stock !== undefined && p.stock <= 0;
             const soldOutClass = isSoldOut ? 'sold-out-card' : '';
             const soldOutOverlay = isSoldOut ? '<div class="sold-out-overlay"><div class="sold-out-stamp">TÜKENDİ</div></div>' : '';
