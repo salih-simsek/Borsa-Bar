@@ -20,8 +20,6 @@
         .header-premium { background: rgba(20, 22, 27, 0.98); border-bottom: 1px solid var(--border-color); box-shadow: 0 4px 30px rgba(0,0,0,0.6); }
         
         .main-logo { height: 90px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255, 61, 0, 0.4)); }
-        
-        /* YENİ LOGO AYARI: Ana logodan küçük olmalı */
         .sub-logo { height: 50px; max-height: 60px; width: auto; object-fit: contain; opacity: 0.9; filter: grayscale(10%); }
         
         .grid-layout { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); gap: 12px; height: calc(100vh - 100px); padding: 15px; }
@@ -67,23 +65,26 @@
         .crash-title { font-family: 'Oswald', sans-serif; font-size: 8rem; color: var(--color-down); font-weight: 700; letter-spacing: 5px; text-transform: uppercase; border-bottom: 4px solid var(--color-down); padding-bottom: 20px; }
         .crash-timer-box { font-family: 'Roboto Mono', monospace; font-size: 6rem; color: #fff; font-weight: 700; margin-top: 40px; background: var(--color-down); padding: 0 40px; border-radius: 8px; }
         .scanline { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 999; opacity: 0.3; }
+        
+        #loading-screen { position: fixed; inset: 0; background: #0f1115; z-index: 3000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: var(--color-down); border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <div id="loading-screen">
+        <span class="loader"></span>
+        <p class="text-white mt-4 font-mono text-sm">Sisteme Bağlanılıyor...</p>
+    </div>
+
     <div class="scanline"></div>
     <div class="h-24 header-premium flex items-center px-8 justify-between relative z-10">
         <div class="flex items-center w-auto shrink-0"> 
-            <!-- DEEPEAK Ana Logo -->
             <img src="deepeak_ana_logo.png" alt="Deepeak Ana Logo" class="main-logo">
-            
             <div class="h-8 w-px bg-gray-700 mx-5"></div>
-            
-            <!-- Müşteri Logosu (Dinamik) -->
-            <!-- src özelliği JS ile doldurulacak -->
-            <img id="tv-client-logo" src="kereviz logo.jpg" alt="İşletme Logosu" class="sub-logo">
+            <img id="tv-client-logo" src="kereviz logo.jpg" alt="Kereviz İşletme Logosu" class="sub-logo">
         </div>
         <div class="flex-1 h-12 flex items-center justify-center relative ticker-container mx-6">
-            <!-- Varsayılan olarak Self Servis Mesajı -->
             <div class="ticker-content" id="ticker">⚠️ SADECE SELF SERVİS HİZMET VERİLMEKTEDİR ⚠️</div>
         </div>
         <div class="text-right flex items-center h-full w-auto shrink-0 justify-end gap-8">
@@ -94,9 +95,7 @@
     </div>
 
     <div class="grid-layout" id="grid">
-        <div class="col-span-5 flex items-center justify-center text-gray-500 text-xl">
-            <span class="animate-pulse">Admin Panelinden Veri Bekleniyor...</span>
-        </div>
+        <!-- JS ile doldurulacak -->
     </div>
 
     <div id="crash-overlay">
@@ -106,61 +105,86 @@
         <div class="crash-timer-box" id="crash-timer">00:10</div>
     </div>
 
-    <script>
-        const channel = new BroadcastChannel('bar_exchange_channel');
-        let products = JSON.parse(localStorage.getItem('bar_products')) || [];
-        const apiKey = ""; 
-        
-        const SELF_SERVICE_MSG = "⚠️ SADECE SELF SERVİS HİZMET VERİLMEKTEDİR. LÜTFEN KASADAN SİPARİŞ VERİNİZ. ⚠️";
-        
+    <!-- FIREBASE SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // ⚠️ BURAYA KENDİ FIREBASE CONFIG BİLGİLERİNİ YAPIŞTIR
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZyC5QFlk3gXKou7s371s3aNRCTMD-Mgc",
+            authDomain: "deepeak-35.firebaseapp.com",
+            projectId: "deepeak-35",
+            storageBucket: "deepeak-35.firebasestorage.app",
+            messagingSenderId: "1011278856624",
+            appId: "1:1011278856624:web:2dc7baaf5506c5327f9675",
+            measurementId: "G-MES7GNPJPT"
+        };
+
+        let app, db;
+        let products = [];
+        let previousPrices = {}; // Fiyat değişimlerini takip etmek için
         let tickerInterval;
+        const SELF_SERVICE_MSG = "⚠️ SADECE SELF SERVİS HİZMET VERİLMEKTEDİR. LÜTFEN KASADAN SİPARİŞ VERİNİZ. ⚠️";
+
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            console.log("Firebase Başlatıldı");
+        } catch (error) {
+            console.error("Firebase Hatası:", error);
+            alert("Firebase bağlantısı kurulamadı.");
+        }
 
         function init() {
-            if (products.length > 0) renderGrid();
+            const customLogo = localStorage.getItem('bar_settings_logo');
+            if(customLogo) document.getElementById('tv-client-logo').src = customLogo;
+
             updateClock();
-            loadSettings(); // Logoyu yükle
             setInterval(updateClock, 1000);
             updateTickerText(SELF_SERVICE_MSG);
-        }
-        
-        function loadSettings() {
-            const customLogo = localStorage.getItem('bar_settings_logo');
-            if(customLogo) {
-                document.getElementById('tv-client-logo').src = customLogo;
-            }
-        }
-
-        function resetTickerToDefault() {
-            if(tickerInterval) clearTimeout(tickerInterval);
-            tickerInterval = setTimeout(() => {
-                updateTickerText(SELF_SERVICE_MSG);
-            }, 10000); 
-        }
-
-        channel.onmessage = (event) => {
-            const { type, data } = event.data;
             
-            if (type === 'UPDATE' || type === 'SYNC') {
-                products = data;
+            setupListeners();
+        }
+
+        function setupListeners() {
+            if (!db) return;
+
+            // Ürünleri Koleksiyondan Dinle
+            onSnapshot(collection(db, "products"), (snapshot) => {
+                document.getElementById('loading-screen').style.display = 'none'; 
+                products = [];
+                snapshot.forEach(doc => {
+                    products.push({ id: doc.id, ...doc.data() });
+                });
                 renderGrid();
-            } else if (type === 'CRASH_START') {
-                triggerCrash();
-            } else if (type === 'ROULETTE_START') {
-                startRoulette();
-            } else if (type === 'TICKER_UPDATE') {
-                updateTickerText(data);
-                resetTickerToDefault(); 
-            } else if (type === 'AI_PREDICTION') {
-                generateAiPrediction();
-            } else if (type === 'SETTINGS_UPDATE') {
-                // Logo güncellendiğinde canlı değiş
-                if(data.logo) document.getElementById('tv-client-logo').src = data.logo;
-            }
-        };
+            });
+
+            // Komutları Dinle
+            onSnapshot(doc(db, "system_data", "commands"), (docSnap) => {
+                if (docSnap.exists()) {
+                    const cmd = docSnap.data();
+                    const now = Date.now();
+                    if (now - cmd.timestamp < 5000) { 
+                        if (cmd.type === 'CRASH_START') triggerCrash();
+                        if (cmd.type === 'ROULETTE_START') startRoulette();
+                        if (cmd.type === 'TICKER_UPDATE') {
+                            updateTickerText(cmd.data);
+                            resetTickerToDefault();
+                        }
+                        if (cmd.type === 'AI_PREDICTION') generateAiPrediction();
+                        if (cmd.type === 'SETTINGS_UPDATE') {
+                             if(cmd.data.logo) document.getElementById('tv-client-logo').src = cmd.data.logo;
+                        }
+                    }
+                }
+            });
+        }
 
         function renderGrid() {
             const grid = document.getElementById('grid');
-            if (grid.children.length !== products.length || grid.querySelector('.col-span-5')) {
+            // Mevcut kart sayısı ürün sayısından farklıysa yeniden çiz
+            if (grid.children.length !== products.length || grid.querySelector('.animate-pulse')) {
                 grid.innerHTML = '';
                 products.forEach(createCard);
             } else {
@@ -169,6 +193,9 @@
         }
 
         function createCard(p) {
+            // İlk renderda fiyatı kaydet
+            previousPrices[p.id] = p.price;
+
             const grid = document.getElementById('grid');
             const flame = p.type === 'HIGH' ? '<span class="absolute top-2 right-2 text-[#FF3D00] animate-pulse text-lg">🔥</span>' : '';
             const isSoldOut = p.stock !== undefined && p.stock <= 0;
@@ -221,26 +248,42 @@
             const arrowEl = document.getElementById(`arrow-${p.id}`);
             const barEl = document.getElementById(`bar-${p.id}`);
             
-            const oldPrice = parseInt(priceEl.innerText);
+            // Fiyat değişikliğini kontrol et
+            const oldPrice = previousPrices[p.id] || p.price;
             const newPrice = p.price;
-
+            
+            // Yeni fiyatı güncelle
             priceEl.innerText = `${newPrice}₺`;
+            previousPrices[p.id] = newPrice; // Hafızayı güncelle
 
             if(!card.classList.contains('spotlight-active') && !card.classList.contains('roulette-highlight')) {
+                // Sınıfları sıfırla
                 card.classList.remove('status-up', 'status-down');
-                void card.offsetWidth; 
-                
-                if (newPrice > p.startPrice) { 
+                void card.offsetWidth; // Animasyon reset
+
+                if (newPrice > oldPrice) { 
+                    // Yükseliş
                     card.classList.add('status-up');
                     arrowEl.innerText = '▲';
                     barEl.style.backgroundColor = 'var(--color-up)';
-                } else if (newPrice < p.startPrice) {
+                } else if (newPrice < oldPrice) {
+                    // Düşüş
                     card.classList.add('status-down');
                     arrowEl.innerText = '▼';
                     barEl.style.backgroundColor = 'var(--color-down)';
                 } else {
-                    arrowEl.innerText = '-';
-                    barEl.style.backgroundColor = '#4b5563';
+                    // Değişim yok ama genel trende göre renk verilebilir
+                    // Veya nötr kalabilir. Şimdilik eğer fiyat başlangıçtan farklıysa yönü koru
+                    if (newPrice > p.startPrice) {
+                        arrowEl.innerText = '▲';
+                        barEl.style.backgroundColor = 'var(--color-up)';
+                    } else if (newPrice < p.startPrice) {
+                        arrowEl.innerText = '▼';
+                        barEl.style.backgroundColor = 'var(--color-down)';
+                    } else {
+                        arrowEl.innerText = '-';
+                        barEl.style.backgroundColor = '#4b5563';
+                    }
                 }
             }
 
@@ -285,7 +328,7 @@
             updateTickerText(`🎉 GECENİN YILDIZI: ${name}! ŞİMDİ İNDİRİMLİ! 🎉`);
             setTimeout(() => {
                 card.classList.remove('spotlight-active');
-                resetTickerToDefault(); // Mesaja dön
+                resetTickerToDefault(); 
             }, 10000);
         }
 
@@ -310,11 +353,18 @@
 
         function updateTickerText(text) {
             const ticker = document.getElementById('ticker');
-            ticker.style.opacity = 0;
-            setTimeout(() => {
-                ticker.innerText = text;
-                ticker.style.opacity = 1;
-            }, 500);
+            if(ticker) {
+                ticker.style.opacity = 0;
+                setTimeout(() => {
+                    ticker.innerText = text;
+                    ticker.style.opacity = 1;
+                }, 500);
+            }
+        }
+
+        function resetTickerToDefault() {
+            if(tickerInterval) clearTimeout(tickerInterval);
+            tickerInterval = setTimeout(() => { updateTickerText(SELF_SERVICE_MSG); }, 10000);
         }
 
         function updateClock() {

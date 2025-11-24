@@ -23,6 +23,11 @@
             transform: scale(1.02);
             box-shadow: 0 0 20px rgba(255, 61, 0, 0.4);
         }
+        
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .animate-shake { animation: shake 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     </style>
 </head>
 <body class="h-screen w-screen flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center overflow-hidden">
@@ -34,18 +39,18 @@
     <div id="login-section" class="relative z-10 w-full max-w-md p-8 glass-panel rounded-2xl shadow-2xl animate-fade-in border-t-4 border-[#FF3D00]">
         <div class="text-center mb-10">
             <div class="flex justify-center">
-                <!-- ANA LOGO BÜYÜTÜLDÜ (h-16 -> h-24) -->
-                <img src="deepeak_ana_logo.png" class="h-24 object-contain drop-shadow-lg" alt="Deepeak Logo">
+                <!-- ANA LOGO (Yazı Yerine) -->
+                <img src="deepeak_ana_logo.png" class="h-16 object-contain drop-shadow-lg" alt="Deepeak Logo">
             </div>
             <p class="text-gray-500 text-xs mt-4 tracking-[0.3em] uppercase font-bold">Yetkili Giriş Sistemi</p>
         </div>
 
-        <form onsubmit="handleLogin(event)" class="space-y-6">
+        <form id="login-form" class="space-y-6">
             <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Kullanıcı Adı</label>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">E-Posta</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500"><i data-lucide="user" class="w-5 h-5"></i></div>
-                    <input type="text" id="username" class="input-field w-full pl-10 pr-4 py-3.5 rounded-xl" placeholder="admin" required>
+                    <input type="email" id="email" class="input-field w-full pl-10 pr-4 py-3.5 rounded-xl" placeholder="admin@deepeak.com" required>
                 </div>
             </div>
             
@@ -57,12 +62,10 @@
                 </div>
             </div>
 
-            <div id="error-msg" class="hidden text-red-400 text-sm text-center bg-red-900/30 p-3 rounded-lg border border-red-800/50 font-bold">
-                Hatalı kullanıcı adı veya şifre!
-            </div>
+            <div id="error-msg" class="hidden text-red-400 text-sm text-center bg-red-900/30 p-3 rounded-lg border border-red-800/50 font-bold"></div>
 
-            <button type="submit" class="w-full btn-brand font-bold py-4 rounded-xl shadow-lg tracking-wide uppercase text-sm">
-                Sisteme Giriş Yap
+            <button type="submit" id="login-btn" class="w-full btn-brand font-bold py-4 rounded-xl shadow-lg tracking-wide uppercase text-sm">
+                Güvenli Giriş
             </button>
         </form>
         
@@ -76,8 +79,7 @@
         
         <!-- Başlık -->
         <div class="text-center mt-8">
-            <!-- DASHBOARD LOGO BÜYÜTÜLDÜ (h-24 -> h-32) -->
-            <img src="deepeak_ana_logo.png" class="h-32 mx-auto mb-8 object-contain drop-shadow-[0_0_25px_rgba(255,61,0,0.4)] hover:scale-105 transition duration-500">
+            <img src="deepeak_ana_logo.png" class="h-24 mx-auto mb-8 object-contain drop-shadow-[0_0_25px_rgba(255,61,0,0.4)] hover:scale-105 transition duration-500">
             <p class="text-gray-400 text-lg font-light tracking-widest uppercase opacity-80">Yönetim Panelinizi Seçiniz</p>
         </div>
 
@@ -104,60 +106,80 @@
 
         <!-- Çıkış Butonu -->
         <div class="text-center mb-4">
-            <button onclick="logout()" class="group bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-12 rounded-full shadow-2xl flex items-center justify-center mx-auto gap-3 transition-all transform hover:scale-105 border border-gray-600/50 text-sm tracking-wider">
+            <button id="logout-btn" class="group bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-12 rounded-full shadow-2xl flex items-center justify-center mx-auto gap-3 transition-all transform hover:scale-105 border border-gray-600/50 text-sm tracking-wider">
                 <i data-lucide="log-out" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i> 
                 GÜVENLİ ÇIKIŞ
             </button>
         </div>
     </div>
 
-    <script>
-        lucide.createIcons();
-        const CREDENTIALS = { username: "admin", password: "123" };
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        window.onload = () => {
-            if (sessionStorage.getItem('isLoggedIn') === 'true') {
-                showDashboard();
-            }
+        // ⚠️ BURAYA KENDİ FIREBASE CONFIG BİLGİLERİNİ YAPIŞTIRIN ⚠️
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZyC5QFlk3gXKou7s371s3aNRCTMD-Mgc",
+            authDomain: "deepeak-35.firebaseapp.com",
+            projectId: "deepeak-35",
+            storageBucket: "deepeak-35.firebasestorage.app",
+            messagingSenderId: "1011278856624",
+            appId: "1:1011278856624:web:2dc7baaf5506c5327f9675",
+            measurementId: "G-MES7GNPJPT"
         };
 
-        function handleLogin(e) {
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        lucide.createIcons();
+
+        // Oturum Kontrolü
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('dashboard-section').classList.remove('hidden');
+                document.getElementById('dashboard-section').classList.add('flex');
+            } else {
+                document.getElementById('login-section').classList.remove('hidden');
+                document.getElementById('dashboard-section').classList.add('hidden');
+                document.getElementById('dashboard-section').classList.remove('flex');
+            }
+        });
+
+        // Giriş İşlemi
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const user = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
+            const btn = document.getElementById('login-btn');
             const errorMsg = document.getElementById('error-msg');
 
-            if (user === CREDENTIALS.username && pass === CREDENTIALS.password) {
-                sessionStorage.setItem('isLoggedIn', 'true');
-                showDashboard();
-            } else {
+            btn.disabled = true;
+            btn.innerText = "Giriş Yapılıyor...";
+            errorMsg.classList.add('hidden');
+
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                errorMsg.innerText = "Giriş Başarısız: E-posta veya şifre hatalı.";
                 errorMsg.classList.remove('hidden');
+                
                 const loginBox = document.getElementById('login-section');
                 loginBox.classList.add('animate-shake');
                 setTimeout(() => loginBox.classList.remove('animate-shake'), 500);
+                
+                btn.disabled = false;
+                btn.innerText = "Sisteme Giriş Yap";
             }
-        }
+        });
 
-        function showDashboard() {
-            document.getElementById('login-section').classList.add('hidden');
-            const dashboard = document.getElementById('dashboard-section');
-            dashboard.classList.remove('hidden');
-            dashboard.classList.add('flex');
-        }
-
-        function logout() {
+        // Çıkış İşlemi
+        document.getElementById('logout-btn').addEventListener('click', async () => {
             if(confirm("Çıkış yapmak istediğinize emin misiniz?")) {
-                sessionStorage.removeItem('isLoggedIn');
+                await signOut(auth);
                 location.reload();
             }
-        }
+        });
     </script>
-
-    <style>
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .animate-shake { animation: shake 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    </style>
 </body>
 </html>
