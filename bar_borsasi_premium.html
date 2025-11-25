@@ -123,7 +123,7 @@
 
         let app, db;
         let products = [];
-        let previousPrices = {}; // Fiyat değişimlerini takip etmek için
+        let previousPrices = {}; // Fiyat takibi için hafıza
         let tickerInterval;
         const SELF_SERVICE_MSG = "⚠️ SADECE SELF SERVİS HİZMET VERİLMEKTEDİR. LÜTFEN KASADAN SİPARİŞ VERİNİZ. ⚠️";
 
@@ -139,6 +139,10 @@
         function init() {
             const customLogo = localStorage.getItem('bar_settings_logo');
             if(customLogo) document.getElementById('tv-client-logo').src = customLogo;
+            
+            // Hafızayı yükle (Okların doğru çalışması için)
+            const savedPrices = localStorage.getItem('bar_previous_prices');
+            if(savedPrices) previousPrices = JSON.parse(savedPrices);
 
             updateClock();
             setInterval(updateClock, 1000);
@@ -150,7 +154,7 @@
         function setupListeners() {
             if (!db) return;
 
-            // Ürünleri Koleksiyondan Dinle
+            // 1. ÜRÜNLERİ KOLEKSİYONDAN DİNLE (HATA DÜZELTİLDİ)
             onSnapshot(collection(db, "products"), (snapshot) => {
                 document.getElementById('loading-screen').style.display = 'none'; 
                 products = [];
@@ -160,7 +164,7 @@
                 renderGrid();
             });
 
-            // Komutları Dinle
+            // 2. KOMUTLARI DİNLE
             onSnapshot(doc(db, "system_data", "commands"), (docSnap) => {
                 if (docSnap.exists()) {
                     const cmd = docSnap.data();
@@ -193,9 +197,6 @@
         }
 
         function createCard(p) {
-            // İlk renderda fiyatı kaydet
-            previousPrices[p.id] = p.price;
-
             const grid = document.getElementById('grid');
             const flame = p.type === 'HIGH' ? '<span class="absolute top-2 right-2 text-[#FF3D00] animate-pulse text-lg">🔥</span>' : '';
             const isSoldOut = p.stock !== undefined && p.stock <= 0;
@@ -216,7 +217,7 @@
                             <div class="drink-price" id="price-${p.id}">${p.price}₺</div>
                             <div class="start-price-label">Açılış: ${p.startPrice}₺</div>
                         </div>
-                        <div class="trend-indicator" id="trend-${p.id}"><span id="arrow-${p.id}">-</span></div>
+                        <div class="trend-indicator" id="arrow-${p.id}">-</div>
                     </div>
                     <div class="price-bar-bg"><div class="price-bar-fill" id="bar-${p.id}" style="width: 50%;"></div></div>
                 </div>`;
@@ -227,63 +228,47 @@
             const card = document.getElementById(`card-${p.id}`);
             if(!card) return;
 
-            const isSoldOut = p.stock !== undefined && p.stock <= 0;
-            const existingOverlay = card.querySelector('.sold-out-overlay');
-            
-            if (isSoldOut) {
+            // Stok Kontrolü
+            const overlay = card.querySelector('.sold-out-overlay');
+            if (p.stock <= 0) {
                 card.classList.add('sold-out-card');
-                if (!existingOverlay) {
-                    const overlay = document.createElement('div');
-                    overlay.className = 'sold-out-overlay';
-                    overlay.innerHTML = '<div class="sold-out-stamp">TÜKENDİ</div>';
-                    card.prepend(overlay);
-                }
-                return; 
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+                return;
             } else {
                 card.classList.remove('sold-out-card');
-                if (existingOverlay) existingOverlay.remove();
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
             }
 
             const priceEl = document.getElementById(`price-${p.id}`);
             const arrowEl = document.getElementById(`arrow-${p.id}`);
             const barEl = document.getElementById(`bar-${p.id}`);
             
-            // Fiyat değişikliğini kontrol et
-            const oldPrice = previousPrices[p.id] || p.price;
+            const oldPrice = previousPrices[p.id] !== undefined ? previousPrices[p.id] : p.price;
             const newPrice = p.price;
-            
-            // Yeni fiyatı güncelle
+
+            // Fiyatı güncelle
             priceEl.innerText = `${newPrice}₺`;
-            previousPrices[p.id] = newPrice; // Hafızayı güncelle
+            
+            // Hafızayı güncelle ve kaydet
+            previousPrices[p.id] = newPrice;
+            localStorage.setItem('bar_previous_prices', JSON.stringify(previousPrices));
 
             if(!card.classList.contains('spotlight-active') && !card.classList.contains('roulette-highlight')) {
-                // Sınıfları sıfırla
                 card.classList.remove('status-up', 'status-down');
-                void card.offsetWidth; // Animasyon reset
-
-                if (newPrice > oldPrice) { 
-                    // Yükseliş
+                void card.offsetWidth; 
+                
+                if (newPrice > p.startPrice) { 
+                    // YÜKSELİŞ
                     card.classList.add('status-up');
                     arrowEl.innerText = '▲';
-                    barEl.style.backgroundColor = 'var(--color-up)';
-                } else if (newPrice < oldPrice) {
-                    // Düşüş
+                } else if (newPrice < p.startPrice) {
+                    // DÜŞÜŞ
                     card.classList.add('status-down');
                     arrowEl.innerText = '▼';
-                    barEl.style.backgroundColor = 'var(--color-down)';
                 } else {
-                    // Değişim yok ama genel trende göre renk verilebilir
-                    // Veya nötr kalabilir. Şimdilik eğer fiyat başlangıçtan farklıysa yönü koru
-                    if (newPrice > p.startPrice) {
-                        arrowEl.innerText = '▲';
-                        barEl.style.backgroundColor = 'var(--color-up)';
-                    } else if (newPrice < p.startPrice) {
-                        arrowEl.innerText = '▼';
-                        barEl.style.backgroundColor = 'var(--color-down)';
-                    } else {
-                        arrowEl.innerText = '-';
-                        barEl.style.backgroundColor = '#4b5563';
-                    }
+                    arrowEl.innerText = '-';
                 }
             }
 
