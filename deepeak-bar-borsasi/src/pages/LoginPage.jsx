@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { User, Lock, LayoutDashboard, MonitorPlay, LogOut } from 'lucide-react';
-import { app } from '../firebase'; // firebase.js'den import et
+import { app } from '../firebase'; 
 
 const auth = getAuth(app);
 
@@ -31,7 +31,6 @@ const LoginPage = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      // DÜZELTME: 'err' değişkenini burada kullanarak hatayı giderdik
       console.error("Giriş Hatası:", err); 
       setError('Giriş Başarısız: E-posta veya şifre hatalı.');
       setShake(true);
@@ -56,7 +55,8 @@ const LoginPage = () => {
         <div className="relative z-10 w-full max-w-6xl p-6 flex flex-col justify-between min-h-[85vh] animate-fade-in">
            {/* Başlık */}
            <div className="text-center mt-8">
-              <div className="h-24 mx-auto mb-8 flex items-center justify-center bg-red-600 rounded-full w-24 font-bold text-xs border-4 border-red-500 shadow-[0_0_25px_rgba(255,61,0,0.4)]">LOGO</div>
+              {/* LOGO GÜNCELLEMESİ */}
+              <img src="/deepeak_ana_logo.png" className="h-24 mx-auto mb-6 object-contain drop-shadow-[0_0_15px_rgba(255,61,0,0.5)]" alt="Deepeak Logo" />
               <p className="text-gray-400 text-lg font-light tracking-widest uppercase opacity-80">Yönetim Panelinizi Seçiniz</p>
            </div>
 
@@ -98,10 +98,11 @@ const LoginPage = () => {
       
       <div className={`relative z-10 w-full max-w-md p-8 glass-panel rounded-2xl shadow-2xl animate-fade-in border-t-4 border-[#FF3D00] ${shake ? 'animate-shake' : ''}`}>
         <div className="text-center mb-10">
-            <div className="flex justify-center">
-                <div className="h-16 w-16 bg-red-600 rounded-full flex items-center justify-center font-bold text-xs text-center border-2 border-red-500">LOGO</div>
+            <div className="flex justify-center mb-6">
+                {/* LOGO GÜNCELLEMESİ */}
+                <img src="/deepeak_ana_logo.png" className="h-20 object-contain drop-shadow-lg" alt="Deepeak Logo" />
             </div>
-            <p className="text-gray-500 text-xs mt-4 tracking-[0.3em] uppercase font-bold">Yetkili Giriş Sistemi</p>
+            <p className="text-gray-500 text-xs mt-2 tracking-[0.3em] uppercase font-bold">Yetkili Giriş Sistemi</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -128,7 +129,8 @@ const LoginPage = () => {
             {error && <div className="text-red-400 text-sm text-center bg-red-900/30 p-3 rounded-lg border border-red-800/50 font-bold">{error}</div>}
 
             <button type="submit" disabled={loading} className="w-full btn-brand font-bold py-4 rounded-xl shadow-lg tracking-wide uppercase text-sm">
-                {loading ? 'Giriş Yapılıyor...' : 'Güvenli Giriş'}
+                {/* METİN GÜNCELLEMESİ */}
+                {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
             </button>
         </form>
         
