@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getDatabase } from "firebase/database";
+// DİKKAT: 'getFirestore' kaldırıldı, yerine 'initializeFirestore' kullanıyoruz
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
@@ -13,10 +13,20 @@ const firebaseConfig = {
   measurementId: "G-MES7GNPJPT"
 };
 
-// App'i başlat
-export const app = initializeApp(firebaseConfig); // <-- BAŞINA 'export' EKLEDİK
+// 1. Uygulamayı Başlat (Dışa aktarmayı unutma)
+export const app = initializeApp(firebaseConfig);
 
-// Servisleri dışa aktar
-export const db = getFirestore(app);
-export const rtdb = getDatabase(app);
+// 2. Veritabanını OFFLINE PERSISTENCE (Çevrimdışı Kayıt) ile Başlat
+// Bu ayar sayesinde internet kopsa bile siparişler kaybolmaz, internet gelince gönderilir.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
+
+// 3. Auth servisini başlat
 export const auth = getAuth(app);
+
+// Realtime Database (rtdb) şu an kullanmıyoruz ama ileride lazım olursa diye dursun istersen
+// import { getDatabase } from "firebase/database";
+// export const rtdb = getDatabase(app);
