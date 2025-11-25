@@ -190,13 +190,13 @@ const TvPage = () => {
 
                   <div className="flex-1 p-3 flex flex-col justify-center relative overflow-hidden">
                       {p.type === 'HIGH' && !isSoldOut && <div className="absolute top-2 right-2 text-xl animate-pulse">🔥</div>}
-                      <div className="font-[Oswald] text-xl font-bold uppercase text-white mb-1 truncate leading-tight">{p.name}</div>
+                      <div className="font-[Oswald] text-2xl font-bold uppercase text-white mb-1 truncate leading-tight">{p.name}</div>
                       <div className="flex items-end justify-between mt-auto">
                           <div>
-                              <div className={`font-[Oswald] text-4xl font-bold leading-none transition-colors duration-300 ${crashActive ? 'text-red-500' : (trend === 'up' ? 'text-[#10b981]' : (trend==='down' ? 'text-[#ef4444]' : 'text-white'))}`}>
+                              <div className={`font-[Oswald] text-6xl font-bold leading-none transition-colors duration-300 ${crashActive ? 'text-red-500' : (trend === 'up' ? 'text-[#10b981]' : (trend==='down' ? 'text-[#ef4444]' : 'text-white'))}`}>
                                   {p.price}<span className="text-lg">₺</span>
                               </div>
-                              <div className="font-mono text-[10px] text-gray-500 font-bold mt-1 tracking-wider uppercase">Açılış: {p.startPrice}₺</div>
+                              <div className="font-mono text-[20px] text-gray-500 font-bold mt-1 tracking-wider uppercase">Açılış: {p.startPrice}₺</div>
                           </div>
                           <div className="text-4xl font-bold mb-1">
                               {trend === 'up' && <span className="text-[#10b981] drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]">▲</span>}
