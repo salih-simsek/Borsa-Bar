@@ -92,21 +92,25 @@ const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('pos');
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
-  
-  // Modallar
   const [isModalOpen, setIsModalOpen] = useState(false);
+<<<<<<< HEAD
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   
   // Sistem Durumu
+=======
+>>>>>>> 9656bafe6732cea17da04c11b18d12c13002ec13
   const [simActive, setSimActive] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState({ show: false, method: '' });
   const [crashUntil, setCrashUntil] = useState(null); // Crash süresi takibi
   
   // İstatistikler
   const [dailyStats, setDailyStats] = useState({ revenue: 0, count: 0 });
+<<<<<<< HEAD
   const [salesHistory, setSalesHistory] = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
+=======
+>>>>>>> 9656bafe6732cea17da04c11b18d12c13002ec13
 
   // Form State
   const [formData, setFormData] = useState({
@@ -202,6 +206,10 @@ const AdminPage = () => {
   }, [products, simActive, crashUntil]);
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9656bafe6732cea17da04c11b18d12c13002ec13
   // --- FONKSİYONLAR ---
 
   // ÇIKIŞ
@@ -522,6 +530,7 @@ const AdminPage = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0f1115] text-white font-sans">
+<<<<<<< HEAD
         
         {/* SIDEBAR */}
         <aside className="w-64 bg-[#14161b] border-r border-gray-800 flex flex-col shrink-0">
@@ -630,6 +639,133 @@ const AdminPage = () => {
                               <button onClick={() => processPayment('cash')} className="bg-[#10b981] hover:bg-green-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-lg"><Banknote className="w-5 h-5"/> NAKİT</button>
                               <button onClick={() => processPayment('credit')} className="bg-[#3b82f6] hover:bg-blue-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-lg"><CreditCard className="w-5 h-5"/> KART</button>
                           </div>
+=======
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-[#14161b] border-r border-gray-800 flex flex-col shrink-0">
+        <div className="p-6 flex flex-col gap-2">
+          <div className="h-10 w-32 bg-red-600 rounded flex items-center justify-center font-bold border-2 border-red-500 shadow-[0_0_10px_rgba(255,0,0,0.3)]">
+            DEEPEAK
+          </div>
+          <p className="text-[10px] text-gray-600 font-mono tracking-widest uppercase ml-1">
+            Yönetim Paneli v7.0
+          </p>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-2 mt-4">
+          <div
+            onClick={() => setActiveTab('pos')}
+            className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
+              activeTab === 'pos'
+                ? 'bg-[#FF3D00]/15 text-[#FFB300] border-l-4 border-[#FF3D00]'
+                : 'text-gray-400 hover:bg-gray-800'
+            }`}
+          >
+            <ShoppingCart className="w-5 h-5 mr-3" /> Kasa / Satış
+          </div>
+          <div
+            onClick={() => setActiveTab('products')}
+            className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
+              activeTab === 'products'
+                ? 'bg-[#FF3D00]/15 text-[#FFB300] border-l-4 border-[#FF3D00]'
+                : 'text-gray-400 hover:bg-gray-800'
+            }`}
+          >
+            <Package className="w-5 h-5 mr-3" /> Ürün & Stok
+          </div>
+          <div
+            onClick={() => setActiveTab('reports')}
+            className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
+              activeTab === 'reports'
+                ? 'bg-[#FF3D00]/15 text-[#FFB300] border-l-4 border-[#FF3D00]'
+                : 'text-gray-400 hover:bg-gray-800'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5 mr-3" /> Raporlar
+          </div>
+        </nav>
+
+        <div className="p-4 border-t border-gray-800 space-y-3">
+          <div className="text-xs font-bold text-gray-500 uppercase">Sistem</div>
+          <button className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition">
+            <Settings className="w-4 h-4" /> Logo Ayarları
+          </button>
+          <button
+            onClick={() =>
+              setDoc(doc(db, 'system_data', 'commands'), {
+                type: 'ROULETTE_START',
+                timestamp: Date.now()
+              })
+            }
+            className="w-full bg-[#FFB300]/20 hover:bg-[#FFB300]/40 text-[#FFB300] border border-[#FFB300] p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"
+          >
+            <Dices className="w-4 h-4" /> ŞANSLI ÜRÜN
+          </button>
+          <div className="flex items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700">
+            <span className="text-sm text-gray-300">Oto. Piyasa</span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={simActive}
+                onChange={() => setSimActive(!simActive)}
+              />
+              <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#10b981]"></div>
+            </label>
+          </div>
+          <button
+            onClick={handleCrashStart}
+            className="w-full bg-red-900/50 hover:bg-red-800 text-red-200 border border-red-700 p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition"
+          >
+            <AlertTriangle className="w-4 h-4" /> CRASH BAŞLAT
+          </button>
+
+        </div>
+        <div className="p-4 bg-[#0f1115] border-t border-gray-800">
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition text-sm"
+          >
+            <LogOut className="w-4 h-4 mr-2" /> Çıkış
+          </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 relative overflow-hidden flex flex-col">
+        {/* 1. POS EKRANI */}
+        {activeTab === 'pos' && (
+          <div className="h-full flex w-full">
+            <div className="flex-1 p-6 overflow-y-auto">
+              <h2 className="text-3xl font-bold mb-6 text-white tracking-wide">Satış</h2>
+              <div className="grid grid-cols-3 xl:grid-cols-4 gap-4">
+                {products.map((p) => {
+                  const isOut = p.stock <= 0;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => addToCart(p)}
+                      className={`bg-[#1a1d24] p-4 rounded-xl border cursor-pointer hover:border-[#FF3D00] transition group relative overflow-hidden shadow-lg ${
+                        isOut
+                          ? 'opacity-50 grayscale pointer-events-none border-[#FF3D00]'
+                          : 'border-gray-800'
+                      }`}
+                    >
+                      <img
+                        src={p.image}
+                        className="w-full h-24 object-cover rounded-lg mb-3 opacity-70 group-hover:opacity-100 bg-gray-800"
+                        onError={(e) => (e.target.style.display = 'none')}
+                      />
+                      <div className="font-bold truncate text-sm text-gray-200">{p.name}</div>
+                      <div className="flex justify-between items-center mt-2">
+                        <div className="text-white font-mono font-bold text-2xl">{p.price}₺</div>
+                        <div
+                          className={`text-xs ${
+                            p.stock < 10 ? 'text-[#FFB300]' : 'text-gray-400'
+                          }`}
+                        >
+                          {isOut ? 'TÜKENDİ' : `Stok: ${p.stock}`}
+                        </div>
+>>>>>>> 9656bafe6732cea17da04c11b18d12c13002ec13
                       </div>
                   </div>
               </div>
@@ -753,6 +889,7 @@ const AdminPage = () => {
           </div>
         )}
 
+<<<<<<< HEAD
         {isSettingsOpen && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
                 <div className="bg-[#1a1d24] p-6 rounded-xl border border-gray-700 w-full max-w-sm">
@@ -763,6 +900,19 @@ const AdminPage = () => {
                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'logo')} />
                     </label>
                 </div>
+=======
+        {/* 2. ÜRÜN YÖNETİMİ */}
+        {activeTab === 'products' && (
+          <div className="h-full p-8 overflow-y-auto w-full">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold">Ürün Listesi & Stok</h2>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="bg-[#FF3D00] hover:bg-red-600 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition"
+              >
+                <Plus className="w-4 h-4" /> Yeni Ürün Ekle
+              </button>
+>>>>>>> 9656bafe6732cea17da04c11b18d12c13002ec13
             </div>
         )}
 
