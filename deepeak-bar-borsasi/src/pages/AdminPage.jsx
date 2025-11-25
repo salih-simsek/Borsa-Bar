@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, writeBatch, increment, setDoc, query, orderBy, limit, getDocs, getDoc } from 'firebase/firestore';
-import { ShoppingCart, Package, BarChart3, Settings, Dices, AlertTriangle, LogOut, Check, Banknote, CreditCard, Plus, Trash, Pencil, X, Upload, History, Archive, XCircle } from 'lucide-react';
+import { ShoppingCart, Package, BarChart3, Settings, Dices, AlertTriangle, LogOut, Check, Banknote, CreditCard, Plus, Trash, Pencil, X, Upload, History, Archive, XCircle, Key, UserCog } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAuth } from 'firebase/auth';
+import { getAuth, updatePassword } from 'firebase/auth'; // Şifre güncelleme eklendi
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -11,9 +11,12 @@ const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('pos'); 
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
+  
+  // Modallar
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  
   const [simActive, setSimActive] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState({ show: false, method: '' });
   
@@ -27,6 +30,9 @@ const AdminPage = () => {
   
   // Form State
   const [formData, setFormData] = useState({ id: '', name: '', price: '', min: '', max: '', type: 'LOW', stock: 50, image: '' });
+  
+  // Şifre Değiştirme State
+  const [newPassword, setNewPassword] = useState('');
 
   // 1. Ürünleri Dinle
   useEffect(() => {
@@ -102,7 +108,24 @@ const AdminPage = () => {
   const updateSystemLogo = async (base64String) => {
       await setDoc(doc(db, "system_data", "settings"), { logo: base64String }, { merge: true });
       alert("Logo güncellendi!");
-      setIsSettingsOpen(false);
+  };
+
+  // --- ŞİFRE DEĞİŞTİRME ---
+  const handleChangePassword = async (e) => {
+      e.preventDefault();
+      if(newPassword.length < 6) return alert("Şifre en az 6 karakter olmalıdır.");
+      
+      const user = auth.currentUser;
+      if(user) {
+          try {
+              await updatePassword(user, newPassword);
+              alert("Şifreniz başarıyla güncellendi!");
+              setNewPassword('');
+          } catch (error) {
+              console.error(error);
+              alert("Hata: Yeni şifre oluşturulamadı. (Lütfen çıkış yapıp tekrar girdikten sonra deneyin)");
+          }
+      }
   };
 
   // --- LOGIC ---
@@ -114,7 +137,6 @@ const AdminPage = () => {
     }
   };
 
-  // EKSİK OLAN SEPET FONKSİYONLARI BURAYA EKLENDİ
   const addToCart = (product) => {
     if (product.stock <= 0) return alert('Stok Yok!');
     const exist = cart.find(c => c.id === product.id);
@@ -322,7 +344,7 @@ const AdminPage = () => {
         <aside className="w-64 bg-[#14161b] border-r border-gray-800 flex flex-col shrink-0">
             <div className="p-6 flex flex-col gap-2">
                 <img src="/deepeak_ana_logo.png" className="h-10 object-contain w-auto mb-2" alt="Deepeak Logo" />
-                <p className="text-[10px] text-gray-600 font-mono tracking-widest uppercase ml-1">Yönetim Paneli v7.4</p>
+                <p className="text-[10px] text-gray-600 font-mono tracking-widest uppercase ml-1">Yönetim Paneli v7.5</p>
             </div>
 
             <nav className="flex-1 px-4 space-y-2 mt-4">
@@ -339,9 +361,12 @@ const AdminPage = () => {
             
             <div className="p-4 border-t border-gray-800 space-y-3">
                 <div className="text-xs font-bold text-gray-500 uppercase">Sistem</div>
+                
+                {/* BUTON ADI GÜNCELLENDİ */}
                 <button onClick={() => setIsSettingsOpen(true)} className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition">
-                  <Settings className="w-4 h-4" /> Logo Ayarları
+                  <UserCog className="w-4 h-4" /> Firma & Hesap
                 </button>
+                
                 <button onClick={triggerRoulette} className="w-full bg-[#FFB300]/20 hover:bg-[#FFB300]/40 text-[#FFB300] border border-[#FFB300] p-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition">
                   <Dices className="w-4 h-4" /> ŞANSLI ÜRÜN
                 </button>
@@ -528,12 +553,36 @@ const AdminPage = () => {
         {isSettingsOpen && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
                 <div className="bg-[#1a1d24] p-6 rounded-xl border border-gray-700 w-full max-w-sm">
-                    <div className="flex justify-between mb-4"><h3 className="text-xl font-bold">Firma Logosu</h3><button onClick={() => setIsSettingsOpen(false)}><X className="text-gray-400"/></button></div>
-                    <p className="text-sm text-gray-500 mb-4">Buradan yüklediğiniz logo TV ekranında görünecektir.</p>
-                    <label className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 p-3 rounded-lg text-white font-bold flex items-center justify-center gap-2 transition">
-                         <Upload className="w-5 h-5"/> Yeni Logo Yükle
-                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'logo')} />
-                    </label>
+                    <div className="flex justify-between mb-4"><h3 className="text-xl font-bold">Firma & Hesap Ayarları</h3><button onClick={() => setIsSettingsOpen(false)}><X className="text-gray-400"/></button></div>
+                    
+                    {/* LOGO BÖLÜMÜ */}
+                    <div className="mb-6 pb-6 border-b border-gray-800">
+                        <label className="block text-sm font-bold text-gray-400 mb-3">Firma Logosu</label>
+                        <p className="text-xs text-gray-600 mb-2">Bu logo TV ekranında görünür.</p>
+                        <label className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 p-3 rounded-lg text-white font-bold flex items-center justify-center gap-2 transition">
+                            <Upload className="w-5 h-5"/> Yeni Logo Yükle
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'logo')} />
+                        </label>
+                    </div>
+
+                    {/* ŞİFRE DEĞİŞTİRME BÖLÜMÜ */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-400 mb-3">Şifre Değiştir</label>
+                        <form onSubmit={handleChangePassword} className="flex gap-2">
+                             <div className="relative flex-1">
+                                <Key className="w-4 h-4 absolute left-3 top-3 text-gray-500"/>
+                                <input 
+                                    type="password" 
+                                    placeholder="Yeni Şifre (En az 6 haneli)" 
+                                    className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg block w-full pl-9 p-2.5"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                />
+                             </div>
+                             <button type="submit" disabled={!newPassword} className="bg-green-600 hover:bg-green-700 text-white px-3 rounded-lg disabled:opacity-50">OK</button>
+                        </form>
+                    </div>
+
                 </div>
             </div>
         )}
