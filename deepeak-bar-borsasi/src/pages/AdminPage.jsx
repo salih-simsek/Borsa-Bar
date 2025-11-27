@@ -25,7 +25,7 @@ const normalizePrice = (base, min, max) => {
   return { rawPrice: raw, price: rounded };
 };
 
-// Satış Sonrası Fiyat Hesaplama
+// Satış Sonrası Fiyat Hesaplama (deterministik, HIGH olasılık için processPayment'ta branch'liyoruz)
 const computePriceAfterPurchase = (product, qty) => {
   const min = Number(product.min) || 0;
   const max = Number(product.max) || 10000;
@@ -67,6 +67,12 @@ const AdminPage = () => {
   const [salesHistory, setSalesHistory] = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
   const [systemLogs, setSystemLogs] = useState([]);
+  
+  // Crash / Şanslı Ürün için ortak sayaç state'i
+  const [marketMode, setMarketMode] = useState(null); // 'crash' | 'lucky' | null
+  const [marketEndsAt, setMarketEndsAt] = useState(null); // timestamp (ms)
+  const [marketSnapshot, setMarketSnapshot] = useState(null); // fiyat snapshot'ı
+  const [marketRemaining, setMarketRemaining] = useState(0); // saniye
   
   // Referanslar
   const systemTimeoutRef = useRef(null);
@@ -111,7 +117,6 @@ const AdminPage = () => {
         const unsubSession = onSnapshot(sessionRef, (snap) => {
             if(snap.exists()) {
                 const data = snap.data();
-                // Veritabanındaki token ile bendeki uyuşmuyor ve veritabanında bir token var ise at.
                 if(data.session_token && data.session_token !== currentSessionId) {
                     alert("Güvenlik Uyarısı: Hesabınıza başka bir cihazdan giriş yapıldı. Oturumunuz kapatılıyor.");
                     auth.signOut();
@@ -121,7 +126,6 @@ const AdminPage = () => {
         });
 
         setLoading(false);
-        // Temizlik fonksiyonu: Unsubscribe listeners
         return () => { unsubCompany(); unsubSession(); };
       } else {
         navigate('/login');
@@ -134,7 +138,6 @@ const AdminPage = () => {
   useEffect(() => {
     if (!user || licenseStatus !== 'active') return;
 
-    // Yollar: companies/{uid}/...
     const productsRef = collection(db, "companies", user.uid, "products");
     const reportsRef = doc(db, "companies", user.uid, "daily_reports", "today");
     const historyRef = collection(db, "companies", user.uid, "sales_history");
@@ -166,7 +169,7 @@ const AdminPage = () => {
     return () => { unsubProducts(); unsubReport(); unsubSales(); };
   }, [user, licenseStatus]);
 
-  // --- 3. OTO PİYASA (Fiyat Düşüş Mantığı) ---
+  // --- 3. OTO PİYASA (Fiyat Düşüş Mantığı, HIGH için %60 ihtimal) ---
   useEffect(() => {
     // Sadece Simülasyon AÇIK, Sistem BOŞTA (Idle), Kullanıcı VAR ve Lisans AKTİF ise çalış.
     if (!simActive || products.length === 0 || systemState !== 'IDLE' || !user || licenseStatus !== 'active') return;
@@ -188,8 +191,13 @@ const AdminPage = () => {
         if (rawBase <= min) return;
 
         const lastTrade = p.lastTradeAt ?? 0;
-        // 1 dakikadır satış yoksa düşür
+
         if (now - lastTrade >= ONE_MINUTE) {
+          // HIGH ürünler için %60 ihtimalle düşür
+          if (p.type === 'HIGH') {
+            const willDecrease = Math.random() < 0.6;
+            if (!willDecrease) return;
+          }
           const newRaw = rawBase - 1;
           const norm = normalizePrice(newRaw, min, max);
           
@@ -209,6 +217,29 @@ const AdminPage = () => {
 
     return () => clearInterval(intervalId);
   }, [products, simActive, systemState, user, licenseStatus]);
+
+  // --- 4. Crash / Şanslı Ürün için sayaç (tek sayaç) ---
+  useEffect(() => {
+    if (!marketMode || !marketEndsAt) {
+      setMarketRemaining(0);
+      return;
+    }
+    const update = () => {
+      const diff = marketEndsAt - Date.now();
+      setMarketRemaining(Math.max(0, Math.floor(diff / 1000)));
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [marketMode, marketEndsAt]);
+
+  // Sayaç formatı
+  const formatRemaining = () => {
+    const sec = marketRemaining;
+    const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+    const ss = String(sec % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  };
 
   // --- ACTIONS (İŞLEMLER) ---
 
@@ -236,152 +267,387 @@ const AdminPage = () => {
       setSystemLogs(logs);
   };
 
-  // RULET (ŞANSLI ÜRÜN)
-  const triggerRoulette = async () => {
-      if (!user) return;
-      const available = products.filter(p => p.stock > 0);
-      if (available.length === 0) return alert("Stokta ürün yok!");
-      
-      const winner = available[Math.floor(Math.random() * available.length)];
-      if(!window.confirm(`Şanslı ürün: "${winner.name}" seçilecek.\nFiyatı ${winner.min}₺ (DİP) olacak.\nSüre: 10 Dakika.\nOnaylıyor musunuz?`)) return;
+  // === ŞANSLI ÜRÜN (BAŞLAT / BİTİR) ===
 
-      logAction("START_ROULETTE", `Winner: ${winner.name}`);
+  const handleLuckyStart = async () => {
+    if (!user) return;
+    if (marketMode) {
+      alert("Önce mevcut modu bitirmeniz gerekiyor.");
+      return;
+    }
+    const available = products.filter(p => p.stock > 0);
+    if (available.length === 0) return alert("Stokta ürün yok!");
 
-      setSystemState('ROULETTE');
-      luckyProductIdRef.current = winner.id;
+    const minutesStr = window.prompt("Şanslı ürün süresi (dakika):", "5");
+    if (minutesStr === null) return;
+    const minutes = parseInt(minutesStr, 10);
+    if (isNaN(minutes) || minutes <= 0) {
+      alert("Geçerli bir süre giriniz.");
+      return;
+    }
 
-      // 1. Animasyon Komutu
-      const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
-      await setDoc(cmdRef, { 
-          type: 'ROULETTE_START', winnerId: winner.id, timestamp: Date.now() 
+    const now = Date.now();
+    const endAt = now + minutes * 60 * 1000;
+
+    const winner = available[Math.floor(Math.random() * available.length)];
+
+    // Eski fiyat snapshot
+    const baseRaw = winner.rawPrice ?? winner.price ?? winner.min ?? 0;
+    const basePrice = winner.price ?? baseRaw;
+    const snapshot = [
+      {
+        id: winner.id,
+        rawPrice: baseRaw,
+        price: basePrice
+      }
+    ];
+
+    const min = Number(winner.min) || 0;
+    const max = Number(winner.max) || 10000;
+    const norm = normalizePrice(min, min, max);
+
+    const pRef = doc(db, "companies", user.uid, "products", winner.id);
+
+    try {
+      const batch = writeBatch(db);
+      // Şanslı ürünü dip fiyata çek
+      batch.update(pRef, {
+        rawPrice: norm.rawPrice,
+        price: norm.price,
+        isLucky: true,
+        lastTradeAt: now
       });
 
-      // 2. Fiyatı Düşür (5sn sonra)
-      setTimeout(async () => {
-          const pRef = doc(db, "companies", user.uid, "products", winner.id);
-          await updateDoc(pRef, { 
-              price: winner.min, 
-              rawPrice: winner.min,
-              isLucky: true,
-              lastTradeAt: Date.now()
-          });
-          
-          await setDoc(cmdRef, { 
-              type: 'TICKER_UPDATE', 
-              data: `🎉 FIRSAT: ${winner.name} 10 DAKİKA BOYUNCA DİP FİYAT! 🎉`, 
-              timestamp: Date.now() 
-          });
-      }, 5000);
+      const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
+      batch.set(cmdRef, {
+        type: 'ROULETTE_START',
+        winnerId: winner.id,
+        luckyProductName: winner.name,
+        timestamp: now,
+        durationMinutes: minutes
+      }, { merge: true });
 
-      // 3. Eski Haline Getir (10dk sonra)
-      if(systemTimeoutRef.current) clearTimeout(systemTimeoutRef.current);
-      
-      systemTimeoutRef.current = setTimeout(async () => {
-          const pRef = doc(db, "companies", user.uid, "products", winner.id);
-          await updateDoc(pRef, { 
-              price: winner.startPrice, 
-              rawPrice: winner.startPrice,
-              isLucky: false
-          });
-          
-          setSystemState('IDLE');
-          luckyProductIdRef.current = null;
-          alert(`Süre doldu! ${winner.name} normale döndü.`);
-      }, 10 * 60 * 1000);
+      await batch.commit();
+
+      await logAction("START_ROULETTE", `Winner: ${winner.name}, Duration: ${minutes} min`);
+
+      // State güncelle
+      setSystemState('ROULETTE');
+      setMarketMode('lucky');
+      setMarketEndsAt(endAt);
+      setMarketSnapshot(snapshot);
+      luckyProductIdRef.current = winner.id;
+
+      if (systemTimeoutRef.current) {
+        clearTimeout(systemTimeoutRef.current);
+      }
+      systemTimeoutRef.current = setTimeout(() => {
+        handleLuckyEnd(true);
+      }, minutes * 60 * 1000);
+
+      alert(`Şanslı ürün: ${winner.name}`);
+    } catch (err) {
+      console.error("Şanslı ürün başlatma hatası:", err);
+      alert("Şanslı ürün başlatılırken hata oluştu: " + (err?.message || String(err)));
+    }
   };
 
-  // CRASH BAŞLAT
+  const handleLuckyEnd = async (fromTimer = false) => {
+    if (!user) return;
+
+    if (marketMode !== 'lucky' || !marketSnapshot || marketSnapshot.length === 0) {
+      // Zaten yoksa state'i temizle
+      setMarketMode(null);
+      setMarketEndsAt(null);
+      setMarketSnapshot(null);
+      setSystemState('IDLE');
+      luckyProductIdRef.current = null;
+      if (systemTimeoutRef.current) {
+        clearTimeout(systemTimeoutRef.current);
+        systemTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    try {
+      const batch = writeBatch(db);
+      marketSnapshot.forEach((p) => {
+        const pRef = doc(db, "companies", user.uid, "products", p.id);
+        batch.update(pRef, {
+          rawPrice: p.rawPrice,
+          price: p.price,
+          isLucky: false
+        });
+      });
+      const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
+      batch.set(cmdRef, { type: 'ROULETTE_END', timestamp: Date.now() }, { merge: true });
+
+      await batch.commit();
+      await logAction("END_ROULETTE", fromTimer ? "Auto end" : "Manual end");
+    } catch (err) {
+      console.error("Şanslı ürünü bitirme hatası:", err);
+      if (!fromTimer) {
+        alert("Şanslı ürün bitirilirken hata oluştu: " + (err?.message || String(err)));
+      }
+    } finally {
+      setMarketMode(null);
+      setMarketEndsAt(null);
+      setMarketSnapshot(null);
+      setSystemState('IDLE');
+      luckyProductIdRef.current = null;
+      if (systemTimeoutRef.current) {
+        clearTimeout(systemTimeoutRef.current);
+        systemTimeoutRef.current = null;
+      }
+      if (!fromTimer) {
+        alert("Şanslı ürün modu sonlandırıldı. Fiyat eski seviyeye döndü.");
+      }
+    }
+  };
+
+  // === CRASH (BAŞLAT / BİTİR) ===
+
   const handleCrashStart = async () => {
     if (!user) return;
-    if (!window.confirm('DİKKAT! Tüm fiyatlar 5 dakika boyunca TABAN fiyata çekilecek. Onaylıyor musunuz?')) return;
+    if (marketMode) {
+      alert("Önce mevcut modu bitirmeniz gerekiyor.");
+      return;
+    }
+    if (!products.length) {
+      alert("Hiç ürün yok.");
+      return;
+    }
 
-    logAction("START_CRASH", "Duration: 5 min");
+    const minutesStr = window.prompt("Crash süresi (dakika):", "5");
+    if (minutesStr === null) return;
+    const minutes = parseInt(minutesStr, 10);
+    if (isNaN(minutes) || minutes <= 0) {
+      alert("Geçerli bir süre giriniz.");
+      return;
+    }
 
-    setSystemState('CRASH');
+    const now = Date.now();
+    const endAt = now + minutes * 60 * 1000;
+
+    // Eski fiyat snapshot'ı (sadece fiyat alanları)
+    const snapshot = products.map((p) => {
+      const baseRaw = p.rawPrice ?? p.price ?? p.min ?? 0;
+      const basePrice = p.price ?? baseRaw;
+      return {
+        id: p.id,
+        rawPrice: baseRaw,
+        price: basePrice
+      };
+    });
 
     const batch = writeBatch(db);
     products.forEach((p) => {
-        const pRef = doc(db, "companies", user.uid, "products", p.id);
-        batch.update(pRef, {
-          rawPrice: p.min,
-          price: p.min,
-          lastTradeAt: Date.now()
-        });
-    });
-    
-    const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
-    batch.set(cmdRef, { type: 'CRASH_START', timestamp: Date.now() });
-    await batch.commit();
-
-    if(systemTimeoutRef.current) clearTimeout(systemTimeoutRef.current);
-    systemTimeoutRef.current = setTimeout(() => {
-        setSystemState('IDLE');
-        alert('Crash süresi doldu. Sistem normale dönüyor.');
-    }, 5 * 60 * 1000);
-  };
-
-  // ÖDEME İŞLEMİ (OPTIMIZE EDİLDİ)
-  const processPayment = async (method) => {
-    if (cart.length === 0) return alert('Sepet Boş');
-    
-    const batch = writeBatch(db);
-    let totalAmount = 0; 
-    let totalQty = 0;
-    let topItem = cart.reduce((prev, current) => (prev.qty > current.qty) ? prev : current);
-
-    // Optimize edilmiş sepet (Resim verisi yok, sadece text) -> 1MB hatasını çözer
-    const simplifiedCart = cart.map(item => ({
-        id: item.id,
-        name: item.name,
-        qty: item.qty,
-        price: item.price
-    }));
-
-    cart.forEach((item) => {
-      const pRef = doc(db, "companies", user.uid, "products", item.id);
-      const currentP = products.find((p) => p.id === item.id);
-      if (!currentP) return;
-
-      // Dokunulmazlık kontrolü
-      const isImmune = (systemState === 'CRASH' || currentP.isLucky === true);
-      const newStock = Math.max(0, Number(currentP.stock || 0) - item.qty);
-      
-      let updates = { stock: newStock, lastTradeAt: Date.now() };
-
-      if (!isImmune) {
-          const { newRawPrice, newPrice, itemTotal } = computePriceAfterPurchase(currentP, item.qty);
-          updates.rawPrice = newRawPrice;
-          updates.price = newPrice;
-          totalAmount += itemTotal;
-      } else {
-          totalAmount += currentP.price * item.qty;
-      }
-      
-      totalQty += item.qty;
-      batch.update(pRef, updates);
+      const min = Number(p.min) || 0;
+      const max = Number(p.max) || 10000;
+      const norm = normalizePrice(min, min, max);
+      const pRef = doc(db, "companies", user.uid, "products", p.id);
+      batch.update(pRef, {
+        rawPrice: norm.rawPrice,
+        price: norm.price,
+        lastTradeAt: now
+      });
     });
 
     const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
-    batch.set(cmdRef, { type: 'TICKER_UPDATE', data: `🔥 SON DAKİKA: ${topItem.name} KAPIŞ KAPIŞ GİDİYOR!`, timestamp: Date.now() });
-    
-    const reportRef = doc(db, "companies", user.uid, "daily_reports", "today");
-    batch.set(reportRef, { totalRevenue: increment(totalAmount), totalCount: increment(totalQty) }, { merge: true });
-    
-    const historyRef = doc(collection(db, "companies", user.uid, "sales_history"));
-    batch.set(historyRef, { 
-        date: new Date().toISOString(), 
-        items: simplifiedCart, 
-        total: totalAmount, 
-        method 
-    });
+    batch.set(cmdRef, {
+      type: 'CRASH_START',
+      timestamp: now,
+      durationMinutes: minutes
+    }, { merge: true });
 
     try {
       await batch.commit();
-      setCart([]);
-      setPaymentSuccess({ show: true, method }); 
-      setTimeout(() => setPaymentSuccess({ show: false, method: '' }), 2000);
-    } catch (err) { console.error("Payment Error:", err); alert("Hata: " + err.message); }
+      await logAction("START_CRASH", `Duration: ${minutes} min`);
+
+      setSystemState('CRASH');
+      setMarketMode('crash');
+      setMarketEndsAt(endAt);
+      setMarketSnapshot(snapshot);
+
+      if (systemTimeoutRef.current) {
+        clearTimeout(systemTimeoutRef.current);
+      }
+      systemTimeoutRef.current = setTimeout(() => {
+        handleCrashEnd(true);
+      }, minutes * 60 * 1000);
+
+      alert("Crash başlatıldı. Tüm fiyatlar minimum seviyeye çekildi.");
+    } catch (err) {
+      console.error("Crash başlatma hatası:", err);
+      alert("Crash başlatılırken hata oluştu: " + (err?.message || String(err)));
+    }
   };
+
+  const handleCrashEnd = async (fromTimer = false) => {
+    if (!user) return;
+
+    if (marketMode !== 'crash' || !marketSnapshot || marketSnapshot.length === 0) {
+      setMarketMode(null);
+      setMarketEndsAt(null);
+      setMarketSnapshot(null);
+      setSystemState('IDLE');
+      if (systemTimeoutRef.current) {
+        clearTimeout(systemTimeoutRef.current);
+        systemTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    try {
+      const batch = writeBatch(db);
+      marketSnapshot.forEach((p) => {
+        const pRef = doc(db, "companies", user.uid, "products", p.id);
+        batch.update(pRef, {
+          rawPrice: p.rawPrice,
+          price: p.price
+        });
+      });
+      const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
+      batch.set(cmdRef, { type: 'CRASH_END', timestamp: Date.now() }, { merge: true });
+
+      await batch.commit();
+      await logAction("END_CRASH", fromTimer ? "Auto end" : "Manual end");
+    } catch (err) {
+      console.error("Crash bitirme hatası:", err);
+      if (!fromTimer) {
+        alert("Crash bitirilirken hata oluştu: " + (err?.message || String(err)));
+      }
+    } finally {
+      setMarketMode(null);
+      setMarketEndsAt(null);
+      setMarketSnapshot(null);
+      setSystemState('IDLE');
+      if (systemTimeoutRef.current) {
+        clearTimeout(systemTimeoutRef.current);
+        systemTimeoutRef.current = null;
+      }
+      if (!fromTimer) {
+        alert("Crash modu sonlandırıldı. Fiyatlar eski seviyeye döndü.");
+      }
+    }
+  };
+
+  // ÖDEME İŞLEMİ (HIGH için %60 ihtimalli artış, sadece Oto Piyasa AÇIKKEN)
+const processPayment = async (method) => {
+  if (cart.length === 0) return alert('Sepet Boş');
+  if (!user) return;
+
+  const batch = writeBatch(db);
+  let totalAmount = 0;
+  let totalQty = 0;
+  let topItem = cart.reduce((prev, current) =>
+    (prev.qty > current.qty) ? prev : current
+  );
+
+  // Optimize edilmiş sepet (Resim verisi yok, sadece text)
+  const simplifiedCart = cart.map(item => ({
+    id: item.id,
+    name: item.name,
+    qty: item.qty,
+    price: item.price
+  }));
+
+  cart.forEach((item) => {
+    const pRef = doc(db, "companies", user.uid, "products", item.id);
+    const currentP = products.find((p) => p.id === item.id);
+    if (!currentP) return;
+
+    // Crash veya Şanslı ürün kapsamında mı? (fiyat dokunulmaz)
+    const isImmune = (systemState === 'CRASH' || currentP.isLucky === true);
+
+    const newStock = Math.max(0, Number(currentP.stock || 0) - item.qty);
+    let updates = {
+      stock: newStock,
+      lastTradeAt: Date.now()
+    };
+
+    if (!isImmune) {
+      // 🔴 OTO PİYASA KAPALIYKEN → fiyat HİÇ değişmez
+      if (!simActive) {
+        // Sadece mevcut fiyattan satış yap
+        totalAmount += currentP.price * item.qty;
+      } else {
+        // 🟢 OTO PİYASA AÇIKKEN → dinamik fiyatlama devrede
+        const min = Number(currentP.min) || 0;
+        const max = Number(currentP.max) || 10000;
+        const rawBase = currentP.rawPrice ?? currentP.price ?? 0;
+
+        let rawAfter = rawBase;
+
+        if (currentP.type === 'HIGH') {
+          // HIGH ürünler → %60 ihtimalle artış
+          const willIncrease = Math.random() < 0.6;
+          if (willIncrease) {
+            rawAfter = rawBase + item.qty;
+          } else {
+            rawAfter = rawBase; // fiyat sabit kalır
+          }
+        } else {
+          // LOW ürünler → her zaman artış
+          rawAfter = rawBase + item.qty;
+        }
+
+        const norm = normalizePrice(rawAfter, min, max);
+        updates.rawPrice = norm.rawPrice;
+        updates.price = norm.price;
+
+        // Ödeme tutarı: yeni yuvarlanmış fiyat * adet
+        totalAmount += norm.price * item.qty;
+      }
+    } else {
+      // Crash veya Şanslı Ürün sırasında: fiyatı değiştirme, mevcut fiyatından satış yap
+      totalAmount += currentP.price * item.qty;
+    }
+
+    totalQty += item.qty;
+    batch.update(pRef, updates);
+  });
+
+  const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
+  batch.set(
+    cmdRef,
+    {
+      type: 'TICKER_UPDATE',
+      data: `🔥 SON DAKİKA: ${topItem.name} KAPIŞ KAPIŞ GİDİYOR!`,
+      timestamp: Date.now()
+    },
+    { merge: true }
+  );
+
+  const reportRef = doc(db, "companies", user.uid, "daily_reports", "today");
+  batch.set(
+    reportRef,
+    {
+      totalRevenue: increment(totalAmount),
+      totalCount: increment(totalQty)
+    },
+    { merge: true }
+  );
+
+  const historyRef = doc(collection(db, "companies", user.uid, "sales_history"));
+  batch.set(historyRef, {
+    date: new Date().toISOString(),
+    items: simplifiedCart,
+    total: totalAmount,
+    method
+  });
+
+  try {
+    await batch.commit();
+    setCart([]);
+    setPaymentSuccess({ show: true, method });
+    setTimeout(() => setPaymentSuccess({ show: false, method: '' }), 2000);
+  } catch (err) {
+    console.error("Payment Error:", err);
+    alert("Hata: " + err.message);
+  }
+};
+
 
   const addToCart = (product) => {
     if (product.stock <= 0) return alert('Stok Yok!');
@@ -554,13 +820,21 @@ const AdminPage = () => {
 
                 <button onClick={() => setIsSettingsOpen(true)} className="w-full bg-gray-800 p-2 rounded-lg text-sm font-bold flex gap-2 justify-center hover:bg-gray-700"><UserCog className="w-4 h-4"/> Firma & Hesap</button>
                 
-                <button 
-                    disabled={systemState !== 'IDLE'}
-                    onClick={triggerRoulette} 
-                    className="w-full bg-[#FFB300]/20 text-[#FFB300] border border-[#FFB300] p-2 rounded-lg text-sm font-bold flex gap-2 justify-center hover:bg-[#FFB300]/40 disabled:opacity-30 disabled:cursor-not-allowed">
-                    {systemState === 'ROULETTE' ? <Lock className="w-4 h-4"/> : <Dices className="w-4 h-4"/>} 
-                    {systemState === 'ROULETTE' ? 'RULET AKTİF' : 'ŞANSLI ÜRÜN'}
-                </button>
+                {/* Şanslı Ürün: Başlat / Bitir */}
+                <div className="flex gap-2">
+                  <button 
+                    disabled={!!marketMode}
+                    onClick={handleLuckyStart} 
+                    className="flex-1 bg-[#FFB300]/20 text-[#FFB300] border border-[#FFB300] p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-[#FFB300]/40 disabled:opacity-30 disabled:cursor-not-allowed">
+                    <Dices className="w-4 h-4"/> ŞANSLI ÜRÜN
+                  </button>
+                  <button
+                    disabled={marketMode !== 'lucky'}
+                    onClick={() => handleLuckyEnd(false)}
+                    className="flex-1 bg-gray-800 text-gray-300 border border-gray-600 p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                    Şanslıyı Bitir
+                  </button>
+                </div>
                 
                 <div className={`flex items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 ${systemState !== 'IDLE' ? 'opacity-30 pointer-events-none' : ''}`}>
                     <span className="text-sm text-gray-300">Oto. Piyasa</span>
@@ -570,13 +844,22 @@ const AdminPage = () => {
                     </label>
                 </div>
 
-                <button 
-                    disabled={systemState !== 'IDLE'}
+                {/* Crash: Başlat / Bitir */}
+                <div className="flex gap-2">
+                  <button 
+                    disabled={!!marketMode}
                     onClick={handleCrashStart} 
-                    className="w-full bg-red-900/50 text-red-200 border border-red-700 p-2 rounded-lg text-sm font-bold flex gap-2 justify-center hover:bg-red-800 disabled:opacity-30 disabled:cursor-not-allowed">
-                    {systemState === 'CRASH' ? <Lock className="w-4 h-4"/> : <AlertTriangle className="w-4 h-4"/>}
-                    {systemState === 'CRASH' ? 'CRASH AKTİF' : 'CRASH BAŞLAT'}
-                </button>
+                    className="flex-1 bg-red-900/50 text-red-200 border border-red-700 p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-red-800 disabled:opacity-30 disabled:cursor-not-allowed">
+                    <AlertTriangle className="w-4 h-4"/>
+                    CRASH BAŞLAT
+                  </button>
+                  <button
+                    disabled={marketMode !== 'crash'}
+                    onClick={() => handleCrashEnd(false)}
+                    className="flex-1 bg-gray-800 text-gray-300 border border-gray-600 p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                    Crash&apos;i Bitir
+                  </button>
+                </div>
             </div>
             <div className="p-4 bg-[#0f1115] border-t border-gray-800"><button onClick={handleLogout} className="flex justify-center w-full p-2 text-gray-400 hover:text-white"><LogOut className="w-4 h-4 mr-2"/> Çıkış</button></div>
         </aside>
@@ -638,8 +921,20 @@ const AdminPage = () => {
             {activeTab === 'products' && (
                 <div className="h-full p-8 overflow-y-auto">
                     <div className="flex justify-between items-center mb-8">
+                      <div className="flex items-center gap-3">
                         <h2 className="text-2xl font-bold">Ürün Yönetimi</h2>
-                        <button onClick={()=>setIsModalOpen(true)} className="bg-[#FF3D00] hover:bg-red-600 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"><Plus className="w-4 h-4"/> Yeni Ürün</button>
+                        {marketMode && (
+                          <div className="px-3 py-1 rounded-full bg-gray-800 border border-gray-600 text-xs text-gray-200 flex items-center gap-2">
+                            <span className="font-semibold">
+                              {marketMode === 'crash' ? 'Crash' : 'Şanslı Ürün'}
+                            </span>
+                            <span className="font-mono">
+                              {formatRemaining()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={()=>setIsModalOpen(true)} className="bg-[#FF3D00] hover:bg-red-600 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"><Plus className="w-4 h-4"/> Yeni Ürün</button>
                     </div>
                     <div className="bg-[#1a1d24] rounded-xl border border-gray-800 overflow-hidden">
                         <table className="w-full text-left text-sm text-gray-400">
@@ -647,7 +942,12 @@ const AdminPage = () => {
                                 <tr>
                                     <th className="p-4">Ürün</th>
                                     <th className="p-4">Fiyat Bilgileri</th> 
-                                    <th className="p-4"><div className="flex justify-between"><span>Stok</span><button onClick={resetPrices} className="text-[10px] bg-gray-700 px-2 rounded">Fiyatları Sıfırla</button></div></th>
+                                    <th className="p-4">
+                                      <div className="flex justify-between">
+                                        <span>Stok</span>
+                                        <button onClick={resetPrices} className="text-[10px] bg-gray-700 px-2 rounded">Fiyatları Sıfırla</button>
+                                      </div>
+                                    </th>
                                     <th className="p-4 text-right">İşlem</th>
                                 </tr>
                             </thead>
