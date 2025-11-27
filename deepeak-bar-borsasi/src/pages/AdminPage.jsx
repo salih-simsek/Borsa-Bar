@@ -320,16 +320,15 @@ const AdminPage = () => {
     }, 5 * 60 * 1000);
   };
 
-  // ÖDEME İŞLEMİ (OPTIMIZE EDİLDİ)
+  // ÖDEME İŞLEMİ (DÜZELTİLMİŞ VE OPTİMİZE EDİLMİŞ)
   const processPayment = async (method) => {
     if (cart.length === 0) return alert('Sepet Boş');
-    
     const batch = writeBatch(db);
-    let totalAmount = 0; 
-    let totalQty = 0;
+    let totalAmount = 0; let totalQty = 0;
+    
     let topItem = cart.reduce((prev, current) => (prev.qty > current.qty) ? prev : current);
 
-    // Optimize edilmiş sepet (Resim verisi yok, sadece text) -> 1MB hatasını çözer
+    // Optimize edilmiş sepet (Resim verisi yok, sadece text)
     const simplifiedCart = cart.map(item => ({
         id: item.id,
         name: item.name,
@@ -342,18 +341,20 @@ const AdminPage = () => {
       const currentP = products.find((p) => p.id === item.id);
       if (!currentP) return;
 
-      // Dokunulmazlık kontrolü
+      // Dokunulmazlık kontrolü (Crash veya Şanslı Ürün ise fiyat değişmez)
       const isImmune = (systemState === 'CRASH' || currentP.isLucky === true);
       const newStock = Math.max(0, Number(currentP.stock || 0) - item.qty);
       
       let updates = { stock: newStock, lastTradeAt: Date.now() };
 
       if (!isImmune) {
+          // --- HATA ÇÖZÜMÜ BURADA: computePriceAfterPurchase KULLANILIYOR ---
           const { newRawPrice, newPrice, itemTotal } = computePriceAfterPurchase(currentP, item.qty);
           updates.rawPrice = newRawPrice;
           updates.price = newPrice;
           totalAmount += itemTotal;
       } else {
+          // Dokunulmazsa (Dip Fiyatsa) o fiyattan sat ama fiyatı arttırma
           totalAmount += currentP.price * item.qty;
       }
       
@@ -393,9 +394,7 @@ const AdminPage = () => {
       setCart([...cart, { ...product, qty: 1 }]);
     }
   };
-  
   const removeFromCart = (idx) => setCart(cart.filter((_, i) => i !== idx));
-  
   const cartTotal = cart.reduce((acc, item) => {
       const currentP = products.find(p => p.id === item.id);
       if(!currentP) return acc;
@@ -538,7 +537,7 @@ const AdminPage = () => {
 
         {/* SIDEBAR */}
         <aside className="w-64 bg-[#14161b] border-r border-gray-800 flex flex-col shrink-0 pt-6">
-            <div className="p-6"><img src="/deepeak_ana_logo.png" className="h-16 object-contain mb-2"/><p className="text-[10px] text-gray-500 font-mono ml-1">SaaS Panel v10.1</p></div>
+            <div className="p-6"><img src="/deepeak_ana_logo.png" className="h-16 object-contain mb-2"/><p className="text-[10px] text-gray-500 font-mono ml-1">SaaS Panel v10.2</p></div>
             <nav className="flex-1 px-4 space-y-2 mt-4">
                 {['pos', 'products', 'reports'].map(tab => (
                     <div key={tab} onClick={() => setActiveTab(tab)} className={`flex items-center p-3 rounded-lg cursor-pointer ${activeTab===tab ? 'bg-[#FF3D00]/15 text-[#FFB300] border-l-4 border-[#FF3D00]' : 'text-gray-400 hover:bg-gray-800'}`}>

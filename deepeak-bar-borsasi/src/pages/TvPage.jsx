@@ -120,7 +120,7 @@ const TvPage = () => {
              {companyLogo && <><div className="h-10 w-px bg-gray-700"></div><img src={companyLogo} className="h-12 w-auto object-contain rounded opacity-90" /></>}
           </div>
           <div className="flex-1 mx-12 overflow-hidden relative h-12 flex items-center justify-center border-l border-r border-white/10 bg-black/20 rounded">
-             <div className="text-[#d4af37] font-mono font-bold text-2xl animate-pulse text-center w-full tracking-wider drop-shadow-md">{ticker}</div>
+             <div className="text-[#d4af37] font-mono font-bold text-3xl animate-pulse text-center w-full tracking-wider drop-shadow-md">{ticker}</div>
           </div>
           <div className="text-5xl font-[Oswald] font-bold tracking-widest text-gray-200 shrink-0">{time.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</div>
       </div>
@@ -147,18 +147,18 @@ const TvPage = () => {
                   </div>
 
                   <div className="flex-1 p-3 flex flex-col justify-center relative overflow-hidden">
-                      {p.type === 'HIGH' && !isSoldOut && <div className="absolute top-2 right-2 text-xl animate-pulse">🔥</div>}
-                      <div className="font-[Oswald] text-xl font-bold uppercase text-white mb-1 break-words leading-tight hyphens-auto">
+                      
+                      <div className="font-[Oswald] text-[23px] font-bold uppercase text-white mb-1 break-words leading-tight hyphens-auto">
                           {p.name}
                       </div>
                       <div className="flex items-end justify-between mt-auto">
                           <div>
-                              <div className={`font-[Oswald] text-4xl font-bold leading-none transition-colors duration-300 ${crashActive || isLucky ? 'text-red-500' : (trend === 'up' ? 'text-[#10b981]' : (trend==='down' ? 'text-[#ef4444]' : 'text-white'))}`}>
-                                  {p.price}<span className="text-lg">₺</span>
+                              <div className={`font-[Oswald] text-6xl font-bold leading-none transition-colors duration-300 ${crashActive || isLucky ? 'text-red-500' : (trend === 'up' ? 'text-[#10b981]' : (trend==='down' ? 'text-[#ef4444]' : 'text-white'))}`}>
+                                  {p.price}<span className="text-5xl">₺</span>
                               </div>
-                              <div className="font-mono text-[10px] text-gray-500 font-bold mt-1 tracking-wider uppercase">Açılış: {p.startPrice}₺</div>
+                              <div className="font-mono text-[20px] text-gray-500 font-bold mt-1 tracking-wider uppercase">Açılış: {p.startPrice}₺</div>
                           </div>
-                          <div className="text-4xl font-bold mb-1">
+                          <div className="text-5xl font-bold mb-9">
                               {isLucky ? <span className="text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]">▼</span> : 
                                (trend === 'up' ? <span className="text-[#10b981]">▲</span> : 
                                (trend === 'down' ? <span className="text-[#ef4444]">▼</span> : <span className="text-gray-700 text-2xl">-</span>))}
