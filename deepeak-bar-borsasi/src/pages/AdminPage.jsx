@@ -4,7 +4,7 @@ import {
   collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, writeBatch, increment, setDoc, query, orderBy, limit, getDocs, getDoc
 } from 'firebase/firestore';
 import {
-  ShoppingCart, Package, BarChart3, Settings, Dices, AlertTriangle, LogOut, Check, Banknote, CreditCard, Plus, Trash, Pencil, X, Upload, History, Archive, XCircle, UserCog, Lock, Tv, FileText
+  ShoppingCart, Package, BarChart3, Settings, Dices, AlertTriangle, LogOut, Check, Banknote, CreditCard, Plus, Trash, Pencil, X, Upload, History, Archive, XCircle, UserCog, Lock, Tv, FileText, Trophy
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, updatePassword, onAuthStateChanged } from 'firebase/auth';
@@ -18,7 +18,6 @@ const normalizePrice = (base, min, max) => {
   if (ones < 0) ones += 10;
   let rounded = ones === 0 ? raw : (ones <= 4 ? raw - ones : raw + (10 - ones));
   
-  // Sınırları koru
   if (rounded < min) { rounded = min; raw = min; }
   if (rounded > max) { rounded = max; raw = max; }
   
@@ -29,9 +28,9 @@ const normalizePrice = (base, min, max) => {
 const computePriceAfterPurchase = (product, qty) => {
   const min = Number(product.min) || 0;
   const max = Number(product.max) || 10000;
-  let raw = product.rawPrice ?? product.price; // Geriye dönük uyumluluk
+  let raw = product.rawPrice ?? product.price; 
   
-  const newRaw = raw + qty; // Her adet için ham fiyat artışı
+  const newRaw = raw + qty; 
   const norm = normalizePrice(newRaw, min, max);
   
   return { newRawPrice: norm.rawPrice, newPrice: norm.price, itemTotal: norm.price * qty };
@@ -42,9 +41,9 @@ const AdminPage = () => {
   const auth = getAuth();
   
   // --- STATE YÖNETİMİ ---
-  const [user, setUser] = useState(null); // Giriş yapan kullanıcı
+  const [user, setUser] = useState(null); 
   const [loading, setLoading] = useState(true);
-  const [licenseStatus, setLicenseStatus] = useState('active'); // Lisans Durumu
+  const [licenseStatus, setLicenseStatus] = useState('active'); 
 
   // Sekmeler ve Veriler
   const [activeTab, setActiveTab] = useState('pos');
@@ -62,8 +61,13 @@ const AdminPage = () => {
   const [simActive, setSimActive] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState({ show: false, method: '' });
   
+  // Sayaçlar (Görsel amaçlı)
+  const [marketMode, setMarketMode] = useState(null); // 'crash' | 'lucky' | null
+  const [marketEndsAt, setMarketEndsAt] = useState(null);
+  const [marketRemaining, setMarketRemaining] = useState(0);
+
   // İstatistikler
-  const [dailyStats, setDailyStats] = useState({ revenue: 0, count: 0 });
+  const [dailyStats, setDailyStats] = useState({ revenue: 0, count: 0, productsMap: {} });
   const [salesHistory, setSalesHistory] = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
   const [systemLogs, setSystemLogs] = useState([]);
@@ -95,7 +99,6 @@ const AdminPage = () => {
       if (currentUser) {
         setUser(currentUser);
         
-        // A) Lisans Kontrolü
         const companyRef = doc(db, "companies", currentUser.uid);
         const unsubCompany = onSnapshot(companyRef, (docSnap) => {
             if(docSnap.exists()) {
@@ -104,14 +107,12 @@ const AdminPage = () => {
             }
         });
 
-        // B) Session Token (Tek Koltuk Kuralı)
         const sessionRef = doc(db, "users", currentUser.uid);
         const currentSessionId = localStorage.getItem('session_token');
         
         const unsubSession = onSnapshot(sessionRef, (snap) => {
             if(snap.exists()) {
                 const data = snap.data();
-                // Veritabanındaki token ile bendeki uyuşmuyor ve veritabanında bir token var ise at.
                 if(data.session_token && data.session_token !== currentSessionId) {
                     alert("Güvenlik Uyarısı: Hesabınıza başka bir cihazdan giriş yapıldı. Oturumunuz kapatılıyor.");
                     auth.signOut();
@@ -121,7 +122,6 @@ const AdminPage = () => {
         });
 
         setLoading(false);
-        // Temizlik fonksiyonu: Unsubscribe listeners
         return () => { unsubCompany(); unsubSession(); };
       } else {
         navigate('/login');
@@ -130,16 +130,14 @@ const AdminPage = () => {
     return () => unsubscribe();
   }, [auth, navigate]);
 
-  // --- 2. VERİ DİNLEYİCİLERİ (SaaS Yapısı) ---
+  // --- 2. VERİ DİNLEYİCİLERİ ---
   useEffect(() => {
     if (!user || licenseStatus !== 'active') return;
 
-    // Yollar: companies/{uid}/...
     const productsRef = collection(db, "companies", user.uid, "products");
     const reportsRef = doc(db, "companies", user.uid, "daily_reports", "today");
     const historyRef = collection(db, "companies", user.uid, "sales_history");
 
-    // a) Ürünler
     const unsubProducts = onSnapshot(productsRef, (snap) => {
       const pList = [];
       snap.forEach(d => pList.push({ id: d.id, ...d.data() }));
@@ -147,15 +145,18 @@ const AdminPage = () => {
       setProducts(pList);
     });
 
-    // b) Günlük Rapor
     const unsubReport = onSnapshot(reportsRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setDailyStats({ revenue: data.totalRevenue || 0, count: data.totalCount || 0 });
+        // 2. İSTEK İÇİN: products mapini alıyoruz
+        setDailyStats({ 
+            revenue: data.totalRevenue || 0, 
+            count: data.totalCount || 0,
+            productsMap: data.productStats || {} 
+        });
       }
     });
 
-    // c) Canlı Satış Akışı
     const q = query(historyRef, orderBy("date", "desc"), limit(20));
     const unsubSales = onSnapshot(q, (snap) => {
         const sales = [];
@@ -166,9 +167,8 @@ const AdminPage = () => {
     return () => { unsubProducts(); unsubReport(); unsubSales(); };
   }, [user, licenseStatus]);
 
-  // --- 3. OTO PİYASA (Fiyat Düşüş Mantığı) ---
+  // --- 3. OTO PİYASA ---
   useEffect(() => {
-    // Sadece Simülasyon AÇIK, Sistem BOŞTA (Idle), Kullanıcı VAR ve Lisans AKTİF ise çalış.
     if (!simActive || products.length === 0 || systemState !== 'IDLE' || !user || licenseStatus !== 'active') return;
 
     const ONE_MINUTE = 60 * 1000;
@@ -178,7 +178,6 @@ const AdminPage = () => {
       let hasUpdates = false;
 
       products.forEach((p) => {
-        // Şanslı ürünse veya min fiyattaysa dokunma
         if (p.id === luckyProductIdRef.current) return;
         
         const rawBase = p.rawPrice ?? p.price ?? 0;
@@ -188,7 +187,6 @@ const AdminPage = () => {
         if (rawBase <= min) return;
 
         const lastTrade = p.lastTradeAt ?? 0;
-        // 1 dakikadır satış yoksa düşür
         if (now - lastTrade >= ONE_MINUTE) {
           const newRaw = rawBase - 1;
           const norm = normalizePrice(newRaw, min, max);
@@ -210,12 +208,34 @@ const AdminPage = () => {
     return () => clearInterval(intervalId);
   }, [products, simActive, systemState, user, licenseStatus]);
 
-  // --- ACTIONS (İŞLEMLER) ---
+  // --- SAYAÇ (Görsel) ---
+  useEffect(() => {
+    if (!marketMode || !marketEndsAt) {
+      setMarketRemaining(0);
+      return;
+    }
+    const update = () => {
+      const diff = marketEndsAt - Date.now();
+      setMarketRemaining(Math.max(0, Math.floor(diff / 1000)));
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [marketMode, marketEndsAt]);
+
+  const formatRemaining = () => {
+    const sec = marketRemaining;
+    const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+    const ss = String(sec % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  };
+
+  // --- ACTIONS ---
 
   const copyTvLink = () => {
-      const link = `${window.location.origin}/tv/${user.uid}`;
-      navigator.clipboard.writeText(link);
-      alert("TV Linki Kopyalandı!");
+    const link = `${window.location.origin}/tv/${user.uid}`;
+    navigator.clipboard.writeText(link);
+    alert('TV Linki Kopyalandı!');
   };
 
   const handleLogout = async () => {
@@ -225,148 +245,257 @@ const AdminPage = () => {
     }
   };
 
-  // LOGLARI AÇ
   const openLogs = async () => {
-      setIsLogsOpen(true);
-      if(!user) return;
-      const q = query(collection(db, "companies", user.uid, "system_logs"), orderBy("timestamp", "desc"), limit(50));
-      const snap = await getDocs(q);
-      const logs = [];
-      snap.forEach(d => logs.push({ id: d.id, ...d.data() }));
-      setSystemLogs(logs);
+    setIsLogsOpen(true);
+    if (!user) return;
+    const q = query(
+      collection(db, 'companies', user.uid, 'system_logs'),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    const logs = [];
+    snap.forEach(d => logs.push({ id: d.id, ...d.data() }));
+    setSystemLogs(logs);
   };
 
   // RULET (ŞANSLI ÜRÜN)
-  const triggerRoulette = async () => {
-      if (!user) return;
-      const available = products.filter(p => p.stock > 0);
-      if (available.length === 0) return alert("Stokta ürün yok!");
+  const handleLuckyStart = async () => {
+    if (!user) return;
+    if (marketMode) return alert('Önce mevcut modu bitirmeniz gerekiyor.');
+    
+    const available = products.filter(p => p.stock > 0);
+    if (available.length === 0) return alert('Stokta ürün yok!');
+
+    const minutesStr = window.prompt('Şanslı ürün süresi (dakika):', '5');
+    if (minutesStr === null) return;
+    const minutes = parseInt(minutesStr, 10);
+    if (isNaN(minutes) || minutes <= 0) return alert('Geçerli bir süre giriniz.');
+
+    const now = Date.now();
+    const endAt = now + minutes * 60 * 1000;
+    const winner = available[Math.floor(Math.random() * available.length)];
+
+    try {
+      const batch = writeBatch(db);
       
-      const winner = available[Math.floor(Math.random() * available.length)];
-      if(!window.confirm(`Şanslı ürün: "${winner.name}" seçilecek.\nFiyatı ${winner.min}₺ (DİP) olacak.\nSüre: 10 Dakika.\nOnaylıyor musunuz?`)) return;
+      const min = Number(winner.min) || 0;
+      const max = Number(winner.max) || 10000;
+      const norm = normalizePrice(min, min, max); // DİP FİYAT
 
-      logAction("START_ROULETTE", `Winner: ${winner.name}`);
-
-      setSystemState('ROULETTE');
-      luckyProductIdRef.current = winner.id;
-
-      // 1. Animasyon Komutu
-      const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
-      await setDoc(cmdRef, { 
-          type: 'ROULETTE_START', winnerId: winner.id, timestamp: Date.now() 
+      const pRef = doc(db, 'companies', user.uid, 'products', winner.id);
+      batch.update(pRef, {
+        rawPrice: norm.rawPrice,
+        price: norm.price,
+        isLucky: true,
+        lastTradeAt: now
       });
 
-      // 2. Fiyatı Düşür (5sn sonra)
-      setTimeout(async () => {
-          const pRef = doc(db, "companies", user.uid, "products", winner.id);
-          await updateDoc(pRef, { 
-              price: winner.min, 
-              rawPrice: winner.min,
-              isLucky: true,
-              lastTradeAt: Date.now()
-          });
-          
-          await setDoc(cmdRef, { 
-              type: 'TICKER_UPDATE', 
-              data: `🎉 FIRSAT: ${winner.name} 10 DAKİKA BOYUNCA DİP FİYAT! 🎉`, 
-              timestamp: Date.now() 
-          });
-      }, 5000);
+      const cmdRef = doc(db, 'companies', user.uid, 'system_data', 'commands');
+      batch.set(cmdRef, {
+          type: 'ROULETTE_START',
+          winnerId: winner.id,
+          timestamp: now,
+          durationMinutes: minutes
+      }, { merge: true });
 
-      // 3. Eski Haline Getir (10dk sonra)
-      if(systemTimeoutRef.current) clearTimeout(systemTimeoutRef.current);
-      
-      systemTimeoutRef.current = setTimeout(async () => {
-          const pRef = doc(db, "companies", user.uid, "products", winner.id);
-          await updateDoc(pRef, { 
-              price: winner.startPrice, 
-              rawPrice: winner.startPrice,
-              isLucky: false
-          });
-          
-          setSystemState('IDLE');
-          luckyProductIdRef.current = null;
-          alert(`Süre doldu! ${winner.name} normale döndü.`);
-      }, 10 * 60 * 1000);
+      await batch.commit();
+      logAction('START_ROULETTE', `Winner: ${winner.name}, Duration: ${minutes} min`);
+
+      setSystemState('ROULETTE');
+      setMarketMode('lucky');
+      setMarketEndsAt(endAt);
+      luckyProductIdRef.current = winner.id;
+
+      if (systemTimeoutRef.current) clearTimeout(systemTimeoutRef.current);
+      systemTimeoutRef.current = setTimeout(() => {
+        handleLuckyEnd(true);
+      }, minutes * 60 * 1000);
+
+      alert(`Şanslı ürün: ${winner.name}`);
+    } catch (err) {
+      console.error(err);
+      alert('Hata oluştu: ' + err.message);
+    }
   };
 
-  // CRASH BAŞLAT
+  const handleLuckyEnd = async (fromTimer = false) => {
+    if (!user) return;
+
+    // Şanslı ürünü bul
+    const luckyId = luckyProductIdRef.current || products.find(p => p.isLucky)?.id;
+
+    try {
+      const batch = writeBatch(db);
+
+      if (luckyId) {
+        const luckyProduct = products.find(p => p.id === luckyId);
+        if (luckyProduct && luckyProduct.startPrice != null) {
+          const pRef = doc(db, 'companies', user.uid, 'products', luckyId);
+          batch.update(pRef, {
+            rawPrice: luckyProduct.startPrice,
+            price: luckyProduct.startPrice,
+            isLucky: false
+          });
+        }
+      }
+
+      const cmdRef = doc(db, 'companies', user.uid, 'system_data', 'commands');
+      batch.set(cmdRef, { type: 'ROULETTE_END', timestamp: Date.now() }, { merge: true });
+
+      await batch.commit();
+      logAction('END_ROULETTE', fromTimer ? 'Auto end' : 'Manual end');
+    } catch (err) { console.error(err); } 
+    finally {
+      setMarketMode(null);
+      setMarketEndsAt(null);
+      setSystemState('IDLE');
+      luckyProductIdRef.current = null;
+      if (systemTimeoutRef.current) {
+        clearTimeout(systemTimeoutRef.current);
+        systemTimeoutRef.current = null;
+      }
+      if (!fromTimer) alert('Şanslı ürün modu sonlandırıldı.');
+    }
+  };
+
+  // CRASH
   const handleCrashStart = async () => {
     if (!user) return;
-    if (!window.confirm('DİKKAT! Tüm fiyatlar 5 dakika boyunca TABAN fiyata çekilecek. Onaylıyor musunuz?')) return;
+    if (marketMode) return alert('Önce mevcut modu bitirmeniz gerekiyor.');
+    
+    const minutesStr = window.prompt('Crash süresi (dakika):', '5');
+    if (minutesStr === null) return;
+    const minutes = parseInt(minutesStr, 10);
+    if (isNaN(minutes) || minutes <= 0) return alert('Geçerli bir süre giriniz.');
 
-    logAction("START_CRASH", "Duration: 5 min");
-
-    setSystemState('CRASH');
+    const now = Date.now();
+    const endAt = now + minutes * 60 * 1000;
 
     const batch = writeBatch(db);
-    products.forEach((p) => {
-        const pRef = doc(db, "companies", user.uid, "products", p.id);
-        batch.update(pRef, {
-          rawPrice: p.min,
-          price: p.min,
-          lastTradeAt: Date.now()
-        });
+    products.forEach(p => {
+      const min = Number(p.min) || 0;
+      const max = Number(p.max) || 10000;
+      const norm = normalizePrice(min, min, max); // DİP FİYAT
+      
+      const pRef = doc(db, 'companies', user.uid, 'products', p.id);
+      batch.update(pRef, {
+        rawPrice: norm.rawPrice,
+        price: norm.price,
+        lastTradeAt: now
+      });
     });
-    
-    const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
-    batch.set(cmdRef, { type: 'CRASH_START', timestamp: Date.now() });
-    await batch.commit();
 
-    if(systemTimeoutRef.current) clearTimeout(systemTimeoutRef.current);
-    systemTimeoutRef.current = setTimeout(() => {
-        setSystemState('IDLE');
-        alert('Crash süresi doldu. Sistem normale dönüyor.');
-    }, 5 * 60 * 1000);
+    const cmdRef = doc(db, 'companies', user.uid, 'system_data', 'commands');
+    batch.set(cmdRef, {
+        type: 'CRASH_START',
+        timestamp: now,
+        durationMinutes: minutes
+    }, { merge: true });
+
+    try {
+      await batch.commit();
+      logAction('START_CRASH', `Duration: ${minutes} min`);
+
+      setSystemState('CRASH');
+      setMarketMode('crash');
+      setMarketEndsAt(endAt);
+
+      if (systemTimeoutRef.current) clearTimeout(systemTimeoutRef.current);
+      systemTimeoutRef.current = setTimeout(() => {
+        handleCrashEnd(true);
+      }, minutes * 60 * 1000);
+
+      alert('Crash başlatıldı.');
+    } catch (err) { console.error(err); alert('Hata: ' + err.message); }
   };
 
-  // ÖDEME İŞLEMİ (DÜZELTİLMİŞ VE OPTİMİZE EDİLMİŞ)
+  const handleCrashEnd = async (fromTimer = false) => {
+    if (!user) return;
+
+    try {
+      const batch = writeBatch(db);
+      products.forEach(p => {
+        if (p.startPrice != null) {
+          const pRef = doc(db, 'companies', user.uid, 'products', p.id);
+          batch.update(pRef, {
+            rawPrice: p.startPrice,
+            price: p.startPrice,
+            isLucky: false
+          });
+        }
+      });
+
+      const cmdRef = doc(db, 'companies', user.uid, 'system_data', 'commands');
+      batch.set(cmdRef, { type: 'CRASH_END', timestamp: Date.now() }, { merge: true });
+
+      await batch.commit();
+      logAction('END_CRASH', fromTimer ? 'Auto end' : 'Manual end');
+    } catch (err) { console.error(err); }
+    finally {
+      setMarketMode(null);
+      setMarketEndsAt(null);
+      setSystemState('IDLE');
+      if (systemTimeoutRef.current) {
+        clearTimeout(systemTimeoutRef.current);
+        systemTimeoutRef.current = null;
+      }
+      if (!fromTimer) alert('Crash modu sonlandırıldı.');
+    }
+  };
+
+  // ÖDEME
   const processPayment = async (method) => {
     if (cart.length === 0) return alert('Sepet Boş');
     const batch = writeBatch(db);
     let totalAmount = 0; let totalQty = 0;
-    
     let topItem = cart.reduce((prev, current) => (prev.qty > current.qty) ? prev : current);
 
-    // Optimize edilmiş sepet (Resim verisi yok, sadece text)
+    // Optimize edilmiş sepet (Resim yok)
     const simplifiedCart = cart.map(item => ({
-        id: item.id,
-        name: item.name,
-        qty: item.qty,
-        price: item.price
+        id: item.id, name: item.name, qty: item.qty, price: item.price
     }));
+    
+    // Günlük rapora ürün bazlı ekleme yapmak için obje
+    const productStatsUpdates = {};
 
     cart.forEach((item) => {
       const pRef = doc(db, "companies", user.uid, "products", item.id);
       const currentP = products.find((p) => p.id === item.id);
       if (!currentP) return;
 
-      // Dokunulmazlık kontrolü (Crash veya Şanslı Ürün ise fiyat değişmez)
       const isImmune = (systemState === 'CRASH' || currentP.isLucky === true);
       const newStock = Math.max(0, Number(currentP.stock || 0) - item.qty);
-      
       let updates = { stock: newStock, lastTradeAt: Date.now() };
 
       if (!isImmune) {
-          // --- HATA ÇÖZÜMÜ BURADA: computePriceAfterPurchase KULLANILIYOR ---
           const { newRawPrice, newPrice, itemTotal } = computePriceAfterPurchase(currentP, item.qty);
           updates.rawPrice = newRawPrice;
           updates.price = newPrice;
           totalAmount += itemTotal;
       } else {
-          // Dokunulmazsa (Dip Fiyatsa) o fiyattan sat ama fiyatı arttırma
           totalAmount += currentP.price * item.qty;
       }
       
       totalQty += item.qty;
       batch.update(pRef, updates);
+      
+      // 2. İSTEK: Ürün bazlı satış sayılarını daily_report içine ekle
+      // Map notation for updating specific keys in nested object
+      productStatsUpdates[`productStats.${item.id}`] = increment(item.qty);
+      // İsimleri de tutalım ki raporda gösterebilelim
+      productStatsUpdates[`productNames.${item.id}`] = item.name;
     });
 
     const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
     batch.set(cmdRef, { type: 'TICKER_UPDATE', data: `🔥 SON DAKİKA: ${topItem.name} KAPIŞ KAPIŞ GİDİYOR!`, timestamp: Date.now() });
     
     const reportRef = doc(db, "companies", user.uid, "daily_reports", "today");
-    batch.set(reportRef, { totalRevenue: increment(totalAmount), totalCount: increment(totalQty) }, { merge: true });
+    batch.set(reportRef, { 
+        totalRevenue: increment(totalAmount), 
+        totalCount: increment(totalQty),
+        ...productStatsUpdates
+    }, { merge: true });
     
     const historyRef = doc(collection(db, "companies", user.uid, "sales_history"));
     batch.set(historyRef, { 
@@ -384,6 +513,7 @@ const AdminPage = () => {
     } catch (err) { console.error("Payment Error:", err); alert("Hata: " + err.message); }
   };
 
+  // --- UI YARDIMCILARI ---
   const addToCart = (product) => {
     if (product.stock <= 0) return alert('Stok Yok!');
     const exist = cart.find(c => c.id === product.id);
@@ -401,7 +531,6 @@ const AdminPage = () => {
       return acc + (currentP.price * item.qty);
   }, 0);
 
-  // ÜRÜN İŞLEMLERİ
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     if(!user) return;
@@ -444,34 +573,24 @@ const AdminPage = () => {
           reader.readAsDataURL(file);
       } else alert("Dosya çok büyük (Max 2MB)");
   };
-  
   const updateSystemLogo = async (base64) => {
       if(!user) return;
       await setDoc(doc(db, "companies", user.uid, "system_data", "settings"), { logo: base64 }, { merge: true });
       alert("Logo güncellendi!"); setIsSettingsOpen(false);
   };
-  
   const handleChangePassword = async (e) => {
       e.preventDefault();
       if(newPassword.length < 6) return alert("En az 6 karakter.");
       try { await updatePassword(auth.currentUser, newPassword); alert("Şifre değişti!"); setNewPassword(''); }
       catch(err) { console.error(err); alert("Hata: Çıkış yapıp tekrar deneyin."); }
   };
-  
   const endOfDay = async () => {
       if(!user || !window.confirm("Gün sonlandırılsın mı?")) return;
-      
       logAction("END_OF_DAY", `Revenue: ${dailyStats.revenue}`);
-
       const reportRef = doc(db, "companies", user.uid, "daily_reports", "today");
       const todaySnap = await getDoc(reportRef);
-      
-      if(todaySnap.exists()) {
-          await addDoc(collection(db, "companies", user.uid, "reports_archive"), { date: new Date().toISOString(), ...todaySnap.data() });
-      }
-      
-      await setDoc(reportRef, { totalRevenue: 0, totalCount: 0 });
-      
+      if(todaySnap.exists()) await addDoc(collection(db, "companies", user.uid, "reports_archive"), { date: new Date().toISOString(), ...todaySnap.data() });
+      await setDoc(reportRef, { totalRevenue: 0, totalCount: 0, productStats: {}, productNames: {} });
       const q = query(collection(db, "companies", user.uid, "sales_history"), limit(500));
       const s = await getDocs(q);
       const b = writeBatch(db);
@@ -479,7 +598,6 @@ const AdminPage = () => {
       await b.commit();
       alert("Gün sonlandı.");
   };
-  
   const fetchHistory = async () => {
       if(!user) return;
       setIsHistoryOpen(true);
@@ -488,7 +606,6 @@ const AdminPage = () => {
       const l = []; s.forEach(d=>l.push({id:d.id, ...d.data()}));
       setArchivedReports(l);
   };
-  
   const deleteArchive = async(id) => { 
       if(!user) return;
       if(window.confirm("Silinsin mi?")) { 
@@ -496,25 +613,39 @@ const AdminPage = () => {
           setArchivedReports(archivedReports.filter(r=>r.id!==id)); 
       }
   };
-  
   const editProduct = (p) => { setFormData({ id: p.id, name: p.name, price: p.startPrice, min: p.min, max: p.max, type: p.type, stock: p.stock, image: p.image }); setIsModalOpen(true); };
-  
-  const deleteProduct = async (id) => { 
-      if(!user) return;
-      if(window.confirm("Silinsin mi?")) await deleteDoc(doc(db, "companies", user.uid, "products", id)); 
-  };
-  
+  const deleteProduct = async (id) => { if(confirm("Silinsin mi?")) await deleteDoc(doc(db, "companies", user.uid, "products", id)); };
   const resetPrices = async () => {
       if(!user || !window.confirm("Fiyatlar başlangıca dönsün mü?")) return;
       logAction("RESET_PRICES", "User request");
       const batch = writeBatch(db);
-      products.forEach(p => batch.update(doc(db, "companies", user.uid, 'products', p.id), { price: p.startPrice, rawPrice: p.startPrice, isLucky: false }));
+      products.forEach(p => {
+          if (p.startPrice != null) {
+              batch.update(doc(db, "companies", user.uid, 'products', p.id), { price: p.startPrice, rawPrice: p.startPrice, isLucky: false });
+          }
+      });
       await batch.commit();
   };
 
+  // En çok satan ürünü bulma
+  const getTopProduct = () => {
+      if (!dailyStats.productsMap || Object.keys(dailyStats.productsMap).length === 0) return { name: '-', count: 0 };
+      let maxId = null;
+      let maxCount = -1;
+      Object.entries(dailyStats.productsMap).forEach(([id, count]) => {
+          if (count > maxCount) {
+              maxCount = count;
+              maxId = id;
+          }
+      });
+      // Ürün ismini bulmak için products listesini kullanabiliriz, ama daily_report'a da kaydediyoruz
+      const pName = products.find(p => p.id === maxId)?.name || "Bilinmeyen Ürün";
+      return { name: pName, count: maxCount };
+  };
+  const topProduct = getTopProduct();
+
   if(loading) return <div className="h-screen flex items-center justify-center bg-[#0f1115] text-white">Yükleniyor...</div>;
 
-  // LİSANS KONTROLÜ
   if (licenseStatus === 'suspended') {
       return (
           <div className="h-screen flex flex-col items-center justify-center bg-red-900 text-white text-center p-8">
@@ -553,15 +684,23 @@ const AdminPage = () => {
 
                 <button onClick={() => setIsSettingsOpen(true)} className="w-full bg-gray-800 p-2 rounded-lg text-sm font-bold flex gap-2 justify-center hover:bg-gray-700"><UserCog className="w-4 h-4"/> Firma & Hesap</button>
                 
-                <button 
-                    disabled={systemState !== 'IDLE'}
-                    onClick={triggerRoulette} 
-                    className="w-full bg-[#FFB300]/20 text-[#FFB300] border border-[#FFB300] p-2 rounded-lg text-sm font-bold flex gap-2 justify-center hover:bg-[#FFB300]/40 disabled:opacity-30 disabled:cursor-not-allowed">
-                    {systemState === 'ROULETTE' ? <Lock className="w-4 h-4"/> : <Dices className="w-4 h-4"/>} 
-                    {systemState === 'ROULETTE' ? 'RULET AKTİF' : 'ŞANSLI ÜRÜN'}
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        disabled={!!marketMode}
+                        onClick={handleLuckyStart} 
+                        className="flex-1 bg-[#FFB300]/20 text-[#FFB300] border border-[#FFB300] p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-[#FFB300]/40 disabled:opacity-30 disabled:cursor-not-allowed">
+                        {/* 3. İSTEK: İkon büyütüldü */}
+                        <Dices className="w-6 h-6"/> 
+                    </button>
+                    <button 
+                        disabled={marketMode !== 'lucky'}
+                        onClick={() => handleLuckyEnd(false)} 
+                        className="flex-1 bg-gray-800 text-gray-300 border border-gray-600 p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                        BİTİR
+                    </button>
+                </div>
                 
-                <div className={`flex items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 ${systemState !== 'IDLE' ? 'opacity-30 pointer-events-none' : ''}`}>
+                <div className={`flex items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 ${systemState === 'CRASH' ? 'opacity-30 pointer-events-none' : ''}`}>
                     <span className="text-sm text-gray-300">Oto. Piyasa</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={simActive} onChange={() => setSimActive(!simActive)}/>
@@ -569,13 +708,21 @@ const AdminPage = () => {
                     </label>
                 </div>
 
-                <button 
-                    disabled={systemState !== 'IDLE'}
-                    onClick={handleCrashStart} 
-                    className="w-full bg-red-900/50 text-red-200 border border-red-700 p-2 rounded-lg text-sm font-bold flex gap-2 justify-center hover:bg-red-800 disabled:opacity-30 disabled:cursor-not-allowed">
-                    {systemState === 'CRASH' ? <Lock className="w-4 h-4"/> : <AlertTriangle className="w-4 h-4"/>}
-                    {systemState === 'CRASH' ? 'CRASH AKTİF' : 'CRASH BAŞLAT'}
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        disabled={!!marketMode}
+                        onClick={handleCrashStart} 
+                        className="flex-1 bg-red-900/50 text-red-200 border border-red-700 p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-red-800 disabled:opacity-30 disabled:cursor-not-allowed">
+                        {/* 3. İSTEK: İkon büyütüldü */}
+                        <AlertTriangle className="w-6 h-6"/>
+                    </button>
+                    <button 
+                        disabled={marketMode !== 'crash'}
+                        onClick={() => handleCrashEnd(false)} 
+                        className="flex-1 bg-gray-800 text-gray-300 border border-gray-600 p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                        BİTİR
+                    </button>
+                </div>
             </div>
             <div className="p-4 bg-[#0f1115] border-t border-gray-800"><button onClick={handleLogout} className="flex justify-center w-full p-2 text-gray-400 hover:text-white"><LogOut className="w-4 h-4 mr-2"/> Çıkış</button></div>
         </aside>
@@ -587,21 +734,32 @@ const AdminPage = () => {
             {activeTab === 'pos' && (
                 <div className="h-full flex w-full">
                     <div className="flex-1 p-6 overflow-y-auto">
-                        <h2 className="text-3xl font-bold mb-6 text-white tracking-wide">Satış</h2>
+                        <div className="flex items-center gap-3 mb-6">
+                            <h2 className="text-3xl font-bold text-white tracking-wide">Satış</h2>
+                            {marketMode && (
+                                <div className="px-3 py-1 rounded-full bg-gray-800 border border-gray-600 text-xs text-gray-200 flex items-center gap-2">
+                                    <span className="font-semibold">{marketMode === 'crash' ? 'Crash' : 'Şanslı Ürün'}</span>
+                                    <span className="font-mono">{formatRemaining()}</span>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="grid grid-cols-3 xl:grid-cols-4 gap-4">
-                            {products.map(p => (
+                            {products.map(p => {
+                                const isDip = p.price === p.min;
+                                return (
                                 <div key={p.id} onClick={() => addToCart(p)} className={`bg-[#1a1d24] p-4 rounded-xl border cursor-pointer hover:border-[#FF3D00] shadow-lg ${p.stock<=0 ? 'opacity-50 grayscale pointer-events-none border-[#FF3D00]' : 'border-gray-800'} ${p.isLucky ? 'ring-2 ring-red-500' : ''}`}>
                                     <div className="h-24 bg-gray-800 rounded-lg mb-3 overflow-hidden relative">
-                                        {p.isLucky && <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-2 font-bold">DİP FİYAT</div>}
+                                        {isDip && <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-2 font-bold">DİP FİYAT</div>}
                                         {p.image ? <img src={p.image} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-gray-600"><Package/></div>}
                                     </div>
                                     <div className="font-bold truncate text-sm text-gray-200">{p.name}</div>
                                     <div className="flex justify-between items-center mt-2">
-                                        <div className={`font-mono font-bold text-2xl ${p.isLucky ? 'text-red-500' : 'text-white'}`}>{p.price}₺</div>
+                                        <div className={`font-mono font-bold text-2xl ${isDip ? 'text-red-500' : 'text-white'}`}>{p.price}₺</div>
                                         <div className="text-xs text-gray-400">{p.stock<=0 ? 'TÜKENDİ' : `Stok: ${p.stock}`}</div>
                                     </div>
                                 </div>
-                            ))}
+                            )})}
                         </div>
                     </div>
                     <div className="w-96 bg-[#1a1d24] border-l border-gray-800 flex flex-col p-4 relative">
@@ -637,7 +795,15 @@ const AdminPage = () => {
             {activeTab === 'products' && (
                 <div className="h-full p-8 overflow-y-auto">
                     <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-2xl font-bold">Ürün Yönetimi</h2>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-2xl font-bold">Ürün Yönetimi</h2>
+                            {marketMode && (
+                                <div className="px-3 py-1 rounded-full bg-gray-800 border border-gray-600 text-xs text-gray-200 flex items-center gap-2">
+                                    <span className="font-semibold">{marketMode === 'crash' ? 'Crash' : 'Şanslı Ürün'}</span>
+                                    <span className="font-mono">{formatRemaining()}</span>
+                                </div>
+                            )}
+                        </div>
                         <button onClick={()=>setIsModalOpen(true)} className="bg-[#FF3D00] hover:bg-red-600 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"><Plus className="w-4 h-4"/> Yeni Ürün</button>
                     </div>
                     <div className="bg-[#1a1d24] rounded-xl border border-gray-800 overflow-hidden">
@@ -651,7 +817,9 @@ const AdminPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {products.map(p => (
+                                {products.map(p => {
+                                    const isDip = p.price === p.min;
+                                    return (
                                     <tr key={p.id} className="border-b border-gray-800 hover:bg-gray-800/50">
                                         <td className="p-4 flex items-center gap-3">
                                             <img src={p.image} className="w-10 h-10 rounded object-cover bg-gray-700"/>
@@ -661,7 +829,7 @@ const AdminPage = () => {
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                                                 <div className="text-white font-mono">Başlangıç: <span className="text-[#FFB300] font-bold">{p.startPrice}₺</span></div>
                                                 <div className="text-gray-400 text-xs">Min Limit: {p.min}₺</div>
-                                                <div className="text-gray-400 text-xs">Güncel: <span className={p.isLucky ? 'text-red-500 font-bold' : ''}>{p.price}₺</span></div>
+                                                <div className="text-gray-400 text-xs">Güncel: <span className={isDip ? 'text-red-500 font-bold' : ''}>{p.price}₺</span></div>
                                                 <div className="text-gray-400 text-xs">Max Limit: {p.max}₺</div>
                                             </div>
                                         </td>
@@ -671,7 +839,7 @@ const AdminPage = () => {
                                             <button onClick={()=>deleteProduct(p.id)} className="text-red-500"><Trash className="w-4 h-4"/></button>
                                         </td>
                                     </tr>
-                                ))}
+                                )})}
                             </tbody>
                         </table>
                     </div>
@@ -689,7 +857,7 @@ const AdminPage = () => {
                             <button onClick={endOfDay} className="bg-red-900 text-red-100 border border-red-700 px-4 py-2 rounded-lg text-sm font-bold flex gap-2"><Archive className="w-4 h-4"/> Günü Bitir</button>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-6 mb-8">
+                    <div className="grid grid-cols-3 gap-6 mb-8">
                         <div className="bg-[#1a1d24] p-6 rounded-xl border border-gray-800">
                             <div className="text-gray-500 text-sm">Günlük Ciro</div>
                             <div className="text-4xl font-bold text-[#FFB300]">{dailyStats.revenue}₺</div>
@@ -697,6 +865,15 @@ const AdminPage = () => {
                         <div className="bg-[#1a1d24] p-6 rounded-xl border border-gray-800">
                             <div className="text-gray-500 text-sm">Satış Adedi</div>
                             <div className="text-4xl font-bold text-[#FF3D00]">{dailyStats.count}</div>
+                        </div>
+                        {/* 2. İSTEK: Günün En Çok Satanı */}
+                        <div className="bg-[#1a1d24] p-6 rounded-xl border border-gray-800 flex items-center gap-4">
+                            <div className="p-3 bg-yellow-900/30 rounded-full"><Trophy className="w-8 h-8 text-yellow-500"/></div>
+                            <div>
+                                <div className="text-gray-500 text-sm">Günün Yıldızı</div>
+                                <div className="text-xl font-bold text-white truncate max-w-[150px]">{topProduct.name}</div>
+                                <div className="text-xs text-gray-400">{topProduct.count} adet satıldı</div>
+                            </div>
                         </div>
                     </div>
                     <div className="bg-[#1a1d24] rounded-xl border border-gray-800 overflow-hidden">
@@ -723,24 +900,16 @@ const AdminPage = () => {
                 <div className="bg-[#1a1d24] p-6 rounded-xl w-full max-w-md border border-gray-700">
                     <div className="flex justify-between mb-4"><h3 className="text-xl font-bold">Ürün Yönetimi</h3><button onClick={()=>setIsModalOpen(false)}><X/></button></div>
                     <form onSubmit={handleProductSubmit} className="space-y-4">
-                        <input placeholder="Ürün Adı" value={formData.name} onChange={e=>setFormData({...formData, name:e.target.value})} className="w-full bg-gray-800 p-2 rounded border border-gray-600" required/>
-                        <div className="flex gap-2">
-                            <label className="flex-1 bg-gray-800 p-2 rounded border border-gray-600 cursor-pointer flex items-center justify-center gap-2">
-                                <Upload className="w-4 h-4"/> Görsel Seç <input type="file" className="hidden" onChange={(e)=>handleImageUpload(e,'product')}/>
-                            </label>
-                            {formData.image && <img src={formData.image} className="h-10 w-10 rounded"/>}
-                        </div>
+                        <div className="space-y-1"><div className="text-xs text-gray-300 font-semibold">Ürün İsmi</div><input placeholder="Örn: Kola 33cl" value={formData.name} onChange={e=>setFormData({...formData, name:e.target.value})} className="w-full bg-gray-800 p-2 rounded border border-gray-600" required/></div>
+                        <div className="space-y-2"><div className="text-xs text-gray-300 font-semibold">Ürün Görseli</div><div className="flex gap-2"><label className="flex-1 bg-gray-800 p-2 rounded border border-gray-600 cursor-pointer flex items-center justify-center gap-2"><Upload className="w-4 h-4"/> Görsel Seç <input type="file" className="hidden" onChange={(e)=>handleImageUpload(e,'product')}/></label>{formData.image && <img src={formData.image} className="h-10 w-10 rounded"/>}</div></div>
                         <div className="grid grid-cols-3 gap-2">
-                            <input type="number" placeholder="Fiyat" value={formData.price} onChange={e=>setFormData({...formData, price:e.target.value})} className="bg-gray-800 p-2 rounded border border-gray-600" required/>
-                            <input type="number" placeholder="Min" value={formData.min} onChange={e=>setFormData({...formData, min:e.target.value})} className="bg-gray-800 p-2 rounded border border-gray-600" required/>
-                            <input type="number" placeholder="Max" value={formData.max} onChange={e=>setFormData({...formData, max:e.target.value})} className="bg-gray-800 p-2 rounded border border-gray-600" required/>
+                            <div className="space-y-1"><div className="text-xs text-gray-300 font-semibold">Başlangıç Fiyatı</div><input type="number" placeholder="Örn: 120" value={formData.price} onChange={e=>setFormData({...formData, price:e.target.value})} className="w-full bg-gray-800 p-2 rounded border border-gray-600" required/></div>
+                            <div className="space-y-1"><div className="text-xs text-gray-300 font-semibold">Minimum Fiyat</div><input type="number" placeholder="Örn: 80" value={formData.min} onChange={e=>setFormData({...formData, min:e.target.value})} className="w-full bg-gray-800 p-2 rounded border border-gray-600" required/></div>
+                            <div className="space-y-1"><div className="text-xs text-gray-300 font-semibold">Maksimum Fiyat</div><input type="number" placeholder="Örn: 180" value={formData.max} onChange={e=>setFormData({...formData, max:e.target.value})} className="w-full bg-gray-800 p-2 rounded border border-gray-600" required/></div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                            <input type="number" placeholder="Stok" value={formData.stock} onChange={e=>setFormData({...formData, stock:e.target.value})} className="bg-gray-800 p-2 rounded border border-gray-600" required/>
-                            <select value={formData.type} onChange={e=>setFormData({...formData, type:e.target.value})} className="bg-gray-800 p-2 rounded border border-gray-600">
-                                <option value="LOW">Düşük Maliyet</option>
-                                <option value="HIGH">Yüksek Maliyet</option>
-                            </select>
+                            <div className="space-y-1"><div className="text-xs text-gray-300 font-semibold">Stok Adedi</div><input type="number" placeholder="Örn: 50" value={formData.stock} onChange={e=>setFormData({...formData, stock:e.target.value})} className="w-full bg-gray-800 p-2 rounded border border-gray-600" required/></div>
+                            <div className="space-y-1"><div className="text-xs text-gray-300 font-semibold">Kar Oranı</div><select value={formData.type} onChange={e=>setFormData({...formData, type:e.target.value})} className="w-full bg-gray-800 p-2 rounded border border-gray-600"><option value="LOW">Düşük Maliyet</option><option value="HIGH">Yüksek Maliyet</option></select></div>
                         </div>
                         <button className="w-full bg-[#FF3D00] p-2 rounded font-bold">Kaydet</button>
                     </form>
@@ -790,7 +959,8 @@ const AdminPage = () => {
                                 {archivedReports.map(r => (
                                     <tr key={r.id} className="border-b border-gray-800">
                                         <td className="p-2">{new Date(r.date).toLocaleDateString()}</td>
-                                        <td className="p-2 text-[#FFB300]">{r.revenue}₺</td>
+                                        {/* 1. İSTEK: revenue -> totalRevenue olarak düzeltildi */}
+                                        <td className="p-2 text-[#FFB300]">{r.totalRevenue}₺</td>
                                         <td className="p-2"><button onClick={()=>deleteArchive(r.id)} className="text-red-500"><XCircle className="w-4 h-4"/></button></td>
                                     </tr>
                                 ))}
