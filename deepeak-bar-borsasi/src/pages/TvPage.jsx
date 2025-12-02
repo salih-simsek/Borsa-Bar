@@ -28,12 +28,12 @@ const TvPage = () => {
     if (!companyId) return; // ID yoksa bekle
 
     // ŞİRKET YOLU: companies/ID/products
-    const productsRef = collection(db, "companies", companyId, "products");
+    const productsRefFS = collection(db, "companies", companyId, "products");
     const settingsRef = doc(db, "companies", companyId, "system_data", "settings");
     const commandsRef = doc(db, "companies", companyId, "system_data", "commands");
 
     // A) Ürünler
-    const unsubProducts = onSnapshot(productsRef, (snap) => {
+    const unsubProducts = onSnapshot(productsRefFS, (snap) => {
       const pList = [];
       snap.forEach(d => {
          const data = d.data();
@@ -111,6 +111,8 @@ const TvPage = () => {
 
   return (
     <div className="h-screen w-screen bg-[#0f1115] text-white font-sans overflow-hidden relative">
+      <div className="absolute inset-0 pointer-events-none opacity-5" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")` }}></div>
+      <div className="scanline absolute inset-0 z-50 pointer-events-none"></div>
 
       <div className="h-24 flex items-center px-8 justify-between relative z-10 bg-[#14161b]/95 border-b border-gray-800 shadow-xl">
           <div className="flex items-center gap-6 shrink-0">
@@ -120,63 +122,124 @@ const TvPage = () => {
           <div className="flex-1 mx-12 overflow-hidden relative h-12 flex items-center justify-center border-l border-r border-white/10 bg-black/20 rounded">
              <div className="text-[#d4af37] font-mono font-bold text-3xl animate-pulse text-center w-full tracking-wider drop-shadow-md">{ticker}</div>
           </div>
-          <div className="text-5xl font-[Oswald] font-bold tracking-widest text-gray-200 shrink-0">{time.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</div>
+          <div className="text-5xl font-[Oswald] font-bold tracking-widest text-gray-200 shrink-0">
+            {time.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}
+          </div>
       </div>
 
       <div className={`p-4 grid grid-cols-5 grid-rows-4 gap-3 h-[calc(100vh-100px)] transition-colors duration-1000 ${crashActive ? 'bg-[#2a1515]' : ''}`}>
          {products.map(p => {
             const isSoldOut = p.stock <= 0;
-            const isLucky = luckyProductId === p.id || p.isLucky; 
-            const trend = isLucky ? 'down' : (trendDirections.current[p.id] || 'stable');
+            // Rulet için şanslı ürün highlight'ı
+            const isLucky = luckyProductId === p.id || p.isLucky;
+            // DİP FİYAT: sadece price === min şartına bağlı
+            const isDip = p.price === p.min;
+            // Trend: dip fiyattaysa grafikte aşağı olarak göster
+            const trend = isDip ? 'down' : (trendDirections.current[p.id] || 'stable');
 
             return (
-              <div key={p.id} className={`drink-card relative bg-[#1a1d24] border border-gray-800 rounded-md flex overflow-hidden shadow-lg transition-all duration-500
+              <div
+                key={p.id}
+                className={`drink-card relative bg-[#1a1d24] border border-gray-800 rounded-md flex overflow-hidden shadow-lg transition-all duration-500
                   ${isSoldOut ? 'sold-out-card' : ''} 
-                  ${!isSoldOut && trend === 'up' && !isLucky ? 'status-up scale-[1.02] z-20' : ''}
-                  ${!isSoldOut && trend === 'down' && !isLucky ? 'status-down' : ''}
+                  ${!isSoldOut && trend === 'up' && !isDip ? 'status-up scale-[1.02] z-20' : ''}
+                  ${!isSoldOut && trend === 'down' && !isDip ? 'status-down' : ''}
                   ${crashActive ? 'border-red-600 bg-red-900/10' : ''}
-                  ${isLucky ? 'ring-4 ring-red-600 scale-110 z-40 shadow-[0_0_80px_rgba(220,38,38,0.6)] bg-[#2a1010] border-red-500' : ''}
-              `}>
-                  {isSoldOut && <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-50"><div className="sold-out-stamp border-4 border-red-600 text-red-600 text-3xl font-bold -rotate-12 px-4 py-1 uppercase tracking-widest">Tükendi</div></div>}
-                  {isLucky && <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-b z-40 shadow-lg animate-pulse">★ DİP FİYAT ★</div>}
+                  ${isLucky || isDip ? 'ring-4 ring-red-600 scale-110 z-40 shadow-[0_0_80px_rgba(220,38,38,0.6)] bg-[#2a1010] border-red-500' : ''}
+              `}
+              >
+                  {isSoldOut && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-50">
+                      <div className="sold-out-stamp border-4 border-red-600 text-red-600 text-3xl font-bold -rotate-12 px-4 py-1 uppercase tracking-widest">
+                        Tükendi
+                      </div>
+                    </div>
+                  )}
+
+                  {/* DİP FİYAT ROZETİ: sadece price == min */}
+                  {isDip && (
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-b z-40 shadow-lg animate-pulse">
+                      ★ DİP FİYAT ★
+                    </div>
+                  )}
 
                   <div className="w-[35%] h-full relative border-r border-white/5 bg-gray-900">
-                      {p.image ? <img src={p.image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-700">?</div>}
+                      {p.image ? (
+                        <img src={p.image} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-700">?</div>
+                      )}
                   </div>
 
                   <div className="flex-1 p-3 flex flex-col justify-center relative overflow-hidden">
-                      
                       <div className="font-[Oswald] text-[23px] font-bold uppercase text-white mb-1 break-words leading-tight hyphens-auto">
                           {p.name}
                       </div>
                       <div className="flex items-end justify-between mt-auto">
                           <div>
-                              <div className={`font-[Oswald] text-6xl font-bold leading-none transition-colors duration-300 ${crashActive || isLucky ? 'text-red-500' : (trend === 'up' ? 'text-[#10b981]' : (trend==='down' ? 'text-[#ef4444]' : 'text-white'))}`}>
+                              <div
+                                className={`font-[Oswald] text-6xl font-bold leading-none transition-colors duration-300
+                                  ${crashActive || isDip ? 'text-red-500'
+                                    : (trend === 'up' ? 'text-[#10b981]'
+                                      : (trend === 'down' ? 'text-[#ef4444]' : 'text-white'))}
+                                `}
+                              >
                                   {p.price}<span className="text-5xl">₺</span>
                               </div>
-                              <div className="font-mono text-[20px] text-gray-500 font-bold mt-1 tracking-wider uppercase">Açılış: {p.startPrice}₺</div>
+                              <div className="font-mono text-[20px] text-gray-500 font-bold mt-1 tracking-wider uppercase">
+                                Açılış: {p.startPrice}₺
+                              </div>
                           </div>
                           <div className="text-5xl font-bold mb-9">
-                              {isLucky ? <span className="text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]">▼</span> : 
-                               (trend === 'up' ? <span className="text-[#10b981]">▲</span> : 
-                               (trend === 'down' ? <span className="text-[#ef4444]">▼</span> : <span className="text-gray-700 text-2xl">-</span>))}
+                              {isDip ? (
+                                <span className="text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]">▼</span>
+                              ) : (
+                                trend === 'up'
+                                  ? <span className="text-[#10b981]">▲</span>
+                                  : (trend === 'down'
+                                      ? <span className="text-[#ef4444]">▼</span>
+                                      : <span className="text-gray-700 text-2xl">-</span>
+                                    )
+                              )}
                           </div>
                       </div>
                       <div className="mt-2 h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
-                          <div className={`h-full transition-all duration-1000 ${trend === 'down' || isLucky ? 'bg-red-500' : (trend==='up' ? 'bg-green-500' : 'bg-gray-500')}`} style={{ width: `${Math.min(100, Math.max(5, ((p.price - p.min) / (p.max - p.min)) * 100))}%` }}></div>
+                          <div
+                            className={`h-full transition-all duration-1000
+                              ${isDip || trend === 'down' ? 'bg-red-500'
+                                : (trend === 'up' ? 'bg-green-500' : 'bg-gray-500')}
+                            `}
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.max(
+                                  5,
+                                  ((p.price - p.min) / (p.max - p.min)) * 100
+                                )
+                              )}%`
+                            }}
+                          ></div>
                       </div>
                   </div>
               </div>
-            )
+            );
          })}
       </div>
 
       {crashActive && (
         <div className="fixed inset-0 bg-black/95 z-[2000] flex flex-col items-center justify-center animate-pulse">
-            <div className="text-[#FF3D00] text-3xl font-[Montserrat] tracking-[0.5em] font-bold mb-6 uppercase">Piyasa Askıya Alındı</div>
-            <div className="font-[Oswald] text-[10rem] text-[#FF3D00] font-bold tracking-widest border-b-8 border-[#FF3D00] pb-4 mb-10 leading-none">ÇÖKÜŞ ANI</div>
-            <div className="font-mono text-9xl text-white font-bold bg-[#FF3D00] px-12 py-4 rounded-xl shadow-[0_0_100px_rgba(255,61,0,0.6)]">00:{crashTimer < 10 ? `0${crashTimer}` : crashTimer}</div>
-            <div className="mt-8 text-gray-400 text-xl font-mono">TÜM FİYATLAR TABAN SEVİYEYE ÇEKİLİYOR...</div>
+            <div className="text-[#FF3D00] text-3xl font-[Montserrat] tracking-[0.5em] font-bold mb-6 uppercase">
+              Piyasa Askıya Alındı
+            </div>
+            <div className="font-[Oswald] text-[10rem] text-[#FF3D00] font-bold tracking-widest border-b-8 border-[#FF3D00] pb-4 mb-10 leading-none">
+              ÇÖKÜŞ ANI
+            </div>
+            <div className="font-mono text-9xl text-white font-bold bg-[#FF3D00] px-12 py-4 rounded-xl shadow-[0_0_100px_rgba(255,61,0,0.6)]">
+              00:{crashTimer < 10 ? `0${crashTimer}` : crashTimer}
+            </div>
+            <div className="mt-8 text-gray-400 text-xl font-mono">
+              TÜM FİYATLAR TABAN SEVİYEYE ÇEKİLİYOR...
+            </div>
         </div>
       )}
     </div>
