@@ -24,13 +24,29 @@ const normalizePrice = (base, min, max) => {
   return { rawPrice: raw, price: rounded };
 };
 
-// Satış Sonrası Fiyat Hesaplama
+// Satış Sonrası Fiyat Hesaplama (GÜNCELLENMİŞ: %50 İHTİMAL)
 const computePriceAfterPurchase = (product, qty) => {
   const min = Number(product.min) || 0;
   const max = Number(product.max) || 10000;
   let raw = product.rawPrice ?? product.price; 
   
-  const newRaw = raw + qty; 
+  let increaseAmount = 0;
+
+  // --- FİYAT ARTIŞ MANTIĞI ---
+  if (product.type === 'HIGH') {
+      // HIGH: Her bir adet satış için %50 ihtimalle (Yarı Yarıya) fiyat artar
+      for (let i = 0; i < qty; i++) {
+          if (Math.random() < 0.50) {
+              increaseAmount += 1;
+          }
+      }
+  } else {
+      // LOW (veya diğerleri): Her adet için kesin artar (Eski düzen)
+      increaseAmount = qty;
+  }
+  // ---------------------------
+
+  const newRaw = raw + increaseAmount; 
   const norm = normalizePrice(newRaw, min, max);
   
   return { newRawPrice: norm.rawPrice, newPrice: norm.price, itemTotal: norm.price * qty };
@@ -162,11 +178,13 @@ const AdminPage = () => {
     return () => { unsubProducts(); unsubReport(); unsubSales(); };
   }, [user, licenseStatus]);
 
-  // --- 3. OTO PİYASA ---
+  // --- 3. OTO PİYASA (GÜNCELLENMİŞ: 45 SN ve %50 İHTİMAL) ---
   useEffect(() => {
     if (!simActive || products.length === 0 || systemState !== 'IDLE' || !user || licenseStatus !== 'active') return;
 
-    const ONE_MINUTE = 60 * 1000;
+    // SÜRE AYARI: 45 SANİYE
+    const MARKET_INTERVAL = 45 * 1000;
+
     const intervalId = setInterval(async () => {
       const now = Date.now();
       const batch = writeBatch(db);
@@ -175,6 +193,14 @@ const AdminPage = () => {
       products.forEach((p) => {
         if (p.id === luckyProductIdRef.current) return;
         
+        // --- OTO DÜŞÜŞ MANTIĞI ---
+        // Eğer HIGH ise, %50 ihtimalle düşer (%50 ihtimalle pas geçer)
+        if (p.type === 'HIGH') {
+            if (Math.random() > 0.50) return;
+        }
+        // LOW ise (veya type yoksa) buraya takılmaz, direkt aşağı devam eder
+        // -------------------------
+
         const rawBase = p.rawPrice ?? p.price ?? 0;
         const min = Number(p.min) || 0;
         const max = Number(p.max) || 10000;
@@ -182,7 +208,9 @@ const AdminPage = () => {
         if (rawBase <= min) return;
 
         const lastTrade = p.lastTradeAt ?? 0;
-        if (now - lastTrade >= ONE_MINUTE) {
+        
+        // Son işlemden 45 saniye (MARKET_INTERVAL) geçti mi?
+        if (now - lastTrade >= MARKET_INTERVAL) {
           const newRaw = rawBase - 1;
           const norm = normalizePrice(newRaw, min, max);
           
@@ -198,7 +226,7 @@ const AdminPage = () => {
       if (hasUpdates) {
         try { await batch.commit(); } catch (err) { console.error("Oto Piyasa Hatası:", err); }
       }
-    }, ONE_MINUTE);
+    }, MARKET_INTERVAL);
 
     return () => clearInterval(intervalId);
   }, [products, simActive, systemState, user, licenseStatus]);
@@ -461,6 +489,7 @@ const AdminPage = () => {
       let updates = { stock: newStock, lastTradeAt: Date.now() };
 
       if (!isImmune) {
+          // GÜNCELLENMİŞ HESAPLAMA FONKSİYONUNU ÇAĞIRIYORUZ
           const { newRawPrice, newPrice, itemTotal } = computePriceAfterPurchase(currentP, item.qty);
           updates.rawPrice = newRawPrice;
           updates.price = newPrice;
