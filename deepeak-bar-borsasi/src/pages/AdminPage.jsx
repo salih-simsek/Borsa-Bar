@@ -4,7 +4,11 @@ import {
   collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, writeBatch, increment, setDoc, query, orderBy, limit, getDocs, getDoc
 } from 'firebase/firestore';
 import {
+<<<<<<< HEAD
   ShoppingCart, Package, BarChart3, Settings, Dices, AlertTriangle, LogOut, Check, Banknote, CreditCard, Plus, Trash, Pencil, X, Upload, History, Archive, XCircle, UserCog, Lock, Tv, FileText, Trophy
+=======
+  ShoppingCart, Package, BarChart3, Settings, Dices, AlertTriangle, LogOut, Check, Banknote, CreditCard, Plus, Trash, Pencil, X, Upload, History, Archive, XCircle, UserCog, Lock, Tv, FileText
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, updatePassword, onAuthStateChanged } from 'firebase/auth';
@@ -24,13 +28,37 @@ const normalizePrice = (base, min, max) => {
   return { rawPrice: raw, price: rounded };
 };
 
+<<<<<<< HEAD
 // Satış Sonrası Fiyat Hesaplama
+=======
+// Satış Sonrası Fiyat Hesaplama (GÜNCELLENMİŞ: %50 İHTİMAL)
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
 const computePriceAfterPurchase = (product, qty) => {
   const min = Number(product.min) || 0;
   const max = Number(product.max) || 10000;
   let raw = product.rawPrice ?? product.price; 
   
+<<<<<<< HEAD
   const newRaw = raw + qty; 
+=======
+  let increaseAmount = 0;
+
+  // --- FİYAT ARTIŞ MANTIĞI ---
+  if (product.type === 'HIGH') {
+      // HIGH: Her bir adet satış için %50 ihtimalle (Yarı Yarıya) fiyat artar
+      for (let i = 0; i < qty; i++) {
+          if (Math.random() < 0.50) {
+              increaseAmount += 1;
+          }
+      }
+  } else {
+      // LOW (veya diğerleri): Her adet için kesin artar (Eski düzen)
+      increaseAmount = qty;
+  }
+  // ---------------------------
+
+  const newRaw = raw + increaseAmount; 
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
   const norm = normalizePrice(newRaw, min, max);
   
   return { newRawPrice: norm.rawPrice, newPrice: norm.price, itemTotal: norm.price * qty };
@@ -67,7 +95,11 @@ const AdminPage = () => {
   const [marketRemaining, setMarketRemaining] = useState(0);
 
   // İstatistikler
+<<<<<<< HEAD
   const [dailyStats, setDailyStats] = useState({ revenue: 0, count: 0, productsMap: {} });
+=======
+  const [dailyStats, setDailyStats] = useState({ revenue: 0, count: 0 });
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
   const [salesHistory, setSalesHistory] = useState([]);
   const [archivedReports, setArchivedReports] = useState([]);
   const [systemLogs, setSystemLogs] = useState([]);
@@ -148,12 +180,16 @@ const AdminPage = () => {
     const unsubReport = onSnapshot(reportsRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+<<<<<<< HEAD
         // 2. İSTEK İÇİN: products mapini alıyoruz
         setDailyStats({ 
             revenue: data.totalRevenue || 0, 
             count: data.totalCount || 0,
             productsMap: data.productStats || {} 
         });
+=======
+        setDailyStats({ revenue: data.totalRevenue || 0, count: data.totalCount || 0 });
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
       }
     });
 
@@ -167,11 +203,19 @@ const AdminPage = () => {
     return () => { unsubProducts(); unsubReport(); unsubSales(); };
   }, [user, licenseStatus]);
 
+<<<<<<< HEAD
   // --- 3. OTO PİYASA ---
   useEffect(() => {
     if (!simActive || products.length === 0 || systemState !== 'IDLE' || !user || licenseStatus !== 'active') return;
+=======
+  // --- 3. OTO PİYASA (GÜNCELLENMİŞ: 45 SN ve %50 İHTİMAL) ---
+  useEffect(() => {
+    if (!simActive || products.length === 0 || systemState !== 'IDLE' || !user || licenseStatus !== 'active') return;
 
-    const ONE_MINUTE = 60 * 1000;
+    // SÜRE AYARI: 45 SANİYE
+    const MARKET_INTERVAL = 45 * 1000;
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
+
     const intervalId = setInterval(async () => {
       const now = Date.now();
       const batch = writeBatch(db);
@@ -180,6 +224,17 @@ const AdminPage = () => {
       products.forEach((p) => {
         if (p.id === luckyProductIdRef.current) return;
         
+<<<<<<< HEAD
+=======
+        // --- OTO DÜŞÜŞ MANTIĞI ---
+        // Eğer HIGH ise, %50 ihtimalle düşer (%50 ihtimalle pas geçer)
+        if (p.type === 'HIGH') {
+            if (Math.random() > 0.50) return;
+        }
+        // LOW ise (veya type yoksa) buraya takılmaz, direkt aşağı devam eder
+        // -------------------------
+
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
         const rawBase = p.rawPrice ?? p.price ?? 0;
         const min = Number(p.min) || 0;
         const max = Number(p.max) || 10000;
@@ -187,7 +242,13 @@ const AdminPage = () => {
         if (rawBase <= min) return;
 
         const lastTrade = p.lastTradeAt ?? 0;
+<<<<<<< HEAD
         if (now - lastTrade >= ONE_MINUTE) {
+=======
+        
+        // Son işlemden 45 saniye (MARKET_INTERVAL) geçti mi?
+        if (now - lastTrade >= MARKET_INTERVAL) {
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
           const newRaw = rawBase - 1;
           const norm = normalizePrice(newRaw, min, max);
           
@@ -203,7 +264,7 @@ const AdminPage = () => {
       if (hasUpdates) {
         try { await batch.commit(); } catch (err) { console.error("Oto Piyasa Hatası:", err); }
       }
-    }, ONE_MINUTE);
+    }, MARKET_INTERVAL);
 
     return () => clearInterval(intervalId);
   }, [products, simActive, systemState, user, licenseStatus]);
@@ -455,9 +516,12 @@ const AdminPage = () => {
     const simplifiedCart = cart.map(item => ({
         id: item.id, name: item.name, qty: item.qty, price: item.price
     }));
+<<<<<<< HEAD
     
     // Günlük rapora ürün bazlı ekleme yapmak için obje
     const productStatsUpdates = {};
+=======
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
 
     cart.forEach((item) => {
       const pRef = doc(db, "companies", user.uid, "products", item.id);
@@ -469,6 +533,10 @@ const AdminPage = () => {
       let updates = { stock: newStock, lastTradeAt: Date.now() };
 
       if (!isImmune) {
+<<<<<<< HEAD
+=======
+          // GÜNCELLENMİŞ HESAPLAMA FONKSİYONUNU ÇAĞIRIYORUZ
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
           const { newRawPrice, newPrice, itemTotal } = computePriceAfterPurchase(currentP, item.qty);
           updates.rawPrice = newRawPrice;
           updates.price = newPrice;
@@ -479,23 +547,30 @@ const AdminPage = () => {
       
       totalQty += item.qty;
       batch.update(pRef, updates);
+<<<<<<< HEAD
       
       // 2. İSTEK: Ürün bazlı satış sayılarını daily_report içine ekle
       // Map notation for updating specific keys in nested object
       productStatsUpdates[`productStats.${item.id}`] = increment(item.qty);
       // İsimleri de tutalım ki raporda gösterebilelim
       productStatsUpdates[`productNames.${item.id}`] = item.name;
+=======
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
     });
 
     const cmdRef = doc(db, "companies", user.uid, "system_data", "commands");
     batch.set(cmdRef, { type: 'TICKER_UPDATE', data: `🔥 SON DAKİKA: ${topItem.name} KAPIŞ KAPIŞ GİDİYOR!`, timestamp: Date.now() });
     
     const reportRef = doc(db, "companies", user.uid, "daily_reports", "today");
+<<<<<<< HEAD
     batch.set(reportRef, { 
         totalRevenue: increment(totalAmount), 
         totalCount: increment(totalQty),
         ...productStatsUpdates
     }, { merge: true });
+=======
+    batch.set(reportRef, { totalRevenue: increment(totalAmount), totalCount: increment(totalQty) }, { merge: true });
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
     
     const historyRef = doc(collection(db, "companies", user.uid, "sales_history"));
     batch.set(historyRef, { 
@@ -590,7 +665,11 @@ const AdminPage = () => {
       const reportRef = doc(db, "companies", user.uid, "daily_reports", "today");
       const todaySnap = await getDoc(reportRef);
       if(todaySnap.exists()) await addDoc(collection(db, "companies", user.uid, "reports_archive"), { date: new Date().toISOString(), ...todaySnap.data() });
+<<<<<<< HEAD
       await setDoc(reportRef, { totalRevenue: 0, totalCount: 0, productStats: {}, productNames: {} });
+=======
+      await setDoc(reportRef, { totalRevenue: 0, totalCount: 0 });
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
       const q = query(collection(db, "companies", user.uid, "sales_history"), limit(500));
       const s = await getDocs(q);
       const b = writeBatch(db);
@@ -627,6 +706,7 @@ const AdminPage = () => {
       await batch.commit();
   };
 
+<<<<<<< HEAD
   // En çok satan ürünü bulma
   const getTopProduct = () => {
       if (!dailyStats.productsMap || Object.keys(dailyStats.productsMap).length === 0) return { name: '-', count: 0 };
@@ -644,6 +724,8 @@ const AdminPage = () => {
   };
   const topProduct = getTopProduct();
 
+=======
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
   if(loading) return <div className="h-screen flex items-center justify-center bg-[#0f1115] text-white">Yükleniyor...</div>;
 
   if (licenseStatus === 'suspended') {
@@ -689,8 +771,12 @@ const AdminPage = () => {
                         disabled={!!marketMode}
                         onClick={handleLuckyStart} 
                         className="flex-1 bg-[#FFB300]/20 text-[#FFB300] border border-[#FFB300] p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-[#FFB300]/40 disabled:opacity-30 disabled:cursor-not-allowed">
+<<<<<<< HEAD
                         {/* 3. İSTEK: İkon büyütüldü */}
                         <Dices className="w-6 h-6"/> 
+=======
+                        <Dices className="w-4 h-4"/> ŞANSLI ÜRÜN
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
                     </button>
                     <button 
                         disabled={marketMode !== 'lucky'}
@@ -713,8 +799,12 @@ const AdminPage = () => {
                         disabled={!!marketMode}
                         onClick={handleCrashStart} 
                         className="flex-1 bg-red-900/50 text-red-200 border border-red-700 p-2 rounded-lg text-xs font-bold flex gap-2 justify-center hover:bg-red-800 disabled:opacity-30 disabled:cursor-not-allowed">
+<<<<<<< HEAD
                         {/* 3. İSTEK: İkon büyütüldü */}
                         <AlertTriangle className="w-6 h-6"/>
+=======
+                        <AlertTriangle className="w-4 h-4"/> CRASH BAŞLAT
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
                     </button>
                     <button 
                         disabled={marketMode !== 'crash'}
@@ -959,8 +1049,12 @@ const AdminPage = () => {
                                 {archivedReports.map(r => (
                                     <tr key={r.id} className="border-b border-gray-800">
                                         <td className="p-2">{new Date(r.date).toLocaleDateString()}</td>
+<<<<<<< HEAD
                                         {/* 1. İSTEK: revenue -> totalRevenue olarak düzeltildi */}
                                         <td className="p-2 text-[#FFB300]">{r.totalRevenue}₺</td>
+=======
+                                        <td className="p-2 text-[#FFB300]">{r.revenue}₺</td>
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
                                         <td className="p-2"><button onClick={()=>deleteArchive(r.id)} className="text-red-500"><XCircle className="w-4 h-4"/></button></td>
                                     </tr>
                                 ))}

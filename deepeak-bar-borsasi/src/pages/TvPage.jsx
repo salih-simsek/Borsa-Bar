@@ -153,8 +153,14 @@ const TvPage = () => {
 
   return (
     <div className="h-screen w-screen bg-[#0f1115] text-white font-sans overflow-hidden relative">
+<<<<<<< HEAD
       {/* 1. İSTEK: Arka plan bulanıklığı ve scanline kaldırıldı. Sadece düz temiz zemin. */}
       
+=======
+      <div className="absolute inset-0 pointer-events-none opacity-5" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")` }}></div>
+      <div className="scanline absolute inset-0 z-50 pointer-events-none"></div>
+
+>>>>>>> 3151abd51dfa86aff6d8f72ebf651fbd9473d2bf
       <div className="h-24 flex items-center px-8 justify-between relative z-10 bg-[#14161b]/95 border-b border-gray-800 shadow-xl">
           <div className="flex items-center gap-6 shrink-0">
              <img src="/deepeak_ana_logo.png" className="h-14 w-auto object-contain drop-shadow-[0_0_10px_rgba(255,0,0,0.5)]" />
